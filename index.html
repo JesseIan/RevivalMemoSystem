@@ -280,6 +280,7 @@
       researcherUid: currentUser ? currentUser.uid : null,
       reviewerUid: currentProfile ? currentProfile.reviewerUid : null,
       recommendation: "", card: "", player: "", year: "", set: "", grade: "", population: "", serial: "",
+      platform: "", endDateTime: "", listingUrl: "",
       tierUsed: "1", fairValue: "", currentPrice: "", liquidityScore: "", convictionScore: "", expectedNetProfit: "",
       whyMispriced: ["", "", ""], risks: ["", "", ""], exitStrategy: "",
       pmDecision: "", pmReason: "", pmDate: "", notes: "",
@@ -465,6 +466,28 @@
         ${fieldHTML("Serial #", `<input id="f_serial" />`)}
       </div></div>
 
+      <div class="section-card"><div class="section-head">LISTING</div><div class="section-body grid2">
+        ${fieldHTML("Platform", `<select id="f_platform">
+          <option value="">\u2014</option>
+          <option>eBay</option>
+          <option>Facebook Marketplace</option>
+          <option>OfferUp</option>
+          <option>Craigslist</option>
+          <option>Local Card Shop</option>
+          <option>Card Show</option>
+          <option>Estate Sale</option>
+          <option>Goldin</option>
+          <option>Fanatics Collect</option>
+          <option>PWCC</option>
+          <option>Heritage</option>
+          <option>Other</option>
+        </select>`)}
+        ${fieldHTML("Auction End (date &amp; time)", `<input type="datetime-local" id="f_endtime" />`)}
+        <div style="grid-column: 1 / -1;">
+          ${fieldHTML("Listing URL", `<input type="url" id="f_listingurl" placeholder="https://\u2026" />`)}
+        </div>
+      </div></div>
+
       <div class="section-card"><div class="section-head">PRICING</div><div class="section-body grid2">
         ${fieldHTML("Tier Used", `<select id="f_tier"><option value="1">1 — Primary</option><option value="2">2 — Fallback</option><option value="3">3 — Illiquid</option></select>`)}
         ${fieldHTML("Fair Value ($)", `<input type="number" step="0.01" id="f_fairvalue" />`)}
@@ -518,6 +541,7 @@
         date: el("f_date").value, researcher: el("f_researcher").value || m.researcher,
         card, player: el("f_player").value, year: el("f_year").value, set: el("f_set").value,
         grade: el("f_grade").value, population: el("f_population").value, serial: el("f_serial").value,
+        platform: el("f_platform").value, endDateTime: el("f_endtime").value, listingUrl: el("f_listingurl").value.trim(),
         tierUsed: el("f_tier").value, fairValue: el("f_fairvalue").value, currentPrice: el("f_currentprice").value,
         liquidityScore: el("f_liquidity").value, convictionScore: el("f_conviction").value,
         expectedNetProfit: el("f_expectedprofit").value,
@@ -563,19 +587,26 @@
     }
     wrap.innerHTML = `
       <table>
-        <thead><tr><th>Date</th><th>Card / Player</th><th>Researcher</th><th>Rec</th><th>Decision</th><th>Outcome</th><th></th></tr></thead>
+        <thead><tr><th>Date</th><th>Card / Player</th><th>Ends</th><th>Researcher</th><th>Rec</th><th>Decision</th><th>Outcome</th><th></th></tr></thead>
         <tbody>
-          ${list.map((m) => `
+          ${list.map((m) => {
+            const nameText = (m.card || "—") + (m.player ? " — " + m.player : "");
+            const nameCell = m.listingUrl
+              ? `<a href="${m.listingUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="color:var(--ink);text-decoration:underline;">${nameText}</a>`
+              : nameText;
+            return `
             <tr class="memo-row" data-id="${m.id}">
               <td>${m.date || "—"}</td>
-              <td style="font-weight:600;color:var(--ink);">${m.card || "—"}${m.player ? " — " + m.player : ""}</td>
+              <td style="font-weight:600;">${nameCell}</td>
+              <td style="color:var(--sub);font-size:12px;">${m.endDateTime ? new Date(m.endDateTime).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}</td>
               <td>${m.researcher || "—"}</td>
               <td>${badge(m.recommendation, REC_COLORS)}</td>
               <td>${badge(m.pmDecision, DEC_COLORS)}</td>
               <td style="color:var(--sub);">${m.outcome && m.outcome.didBuy ? "Completed" : "Pending"}</td>
               <td style="text-align:right;color:#9CA3AF;">&rsaquo;</td>
             </tr>
-          `).join("")}
+          `;
+          }).join("")}
         </tbody>
       </table>
     `;
@@ -605,6 +636,12 @@
     el("detailBody").innerHTML = `
       <div style="font-size:11px;color:#9CA3AF;font-weight:700;margin-bottom:4px;">${m.id}</div>
       <h3 style="font-size:20px;margin-bottom:16px;">${m.card || "Untitled"}${m.player ? " — " + m.player : ""}</h3>
+
+      <div class="section-card"><div class="section-head">LISTING</div><div class="section-body grid2" style="font-size:13px;">
+        <div><label class="field-label">Platform</label>${m.platform || "—"}</div>
+        <div><label class="field-label">Auction Ends</label>${m.endDateTime ? new Date(m.endDateTime).toLocaleString() : "—"}</div>
+        <div style="grid-column: 1 / -1;"><label class="field-label">Listing</label>${m.listingUrl ? `<a href="${m.listingUrl}" target="_blank" rel="noopener noreferrer" style="color:#1F2937;text-decoration:underline;">Open listing \u2197</a>` : "—"}</div>
+      </div></div>
 
       <div class="section-card"><div class="section-head">RECOMMENDATION &amp; PRICING</div><div class="section-body grid2" style="font-size:13px;">
         <div><label class="field-label">Recommendation</label>${badge(m.recommendation, REC_COLORS)}</div>
