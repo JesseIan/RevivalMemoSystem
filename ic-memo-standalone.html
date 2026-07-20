@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IC Memo System</title>
+<style>
+  :root {
+    --ink: #111827; --sub: #6B7280; --line: #E5E7EB; --panel: #F9FAFB;
+    --dark: #1F2937; --buy: #15803D; --watch: #B45309; --pass: #B91C1C;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #F3F4F6; color: var(--ink); }
+  h1, h2, h3 { font-family: Georgia, serif; margin: 0; }
+  input, select, textarea, button { font-family: inherit; font-size: 14px; }
+  input, select, textarea {
+    width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid #D1D5DB; background: #fff;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  label.field-label { display: block; font-size: 12px; font-weight: 600; color: var(--sub); margin-bottom: 4px; letter-spacing: 0.02em; }
+  .field { margin-bottom: 14px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .section-card { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 16px; overflow: hidden; background: #fff; }
+  .section-head { background: var(--dark); color: #fff; padding: 8px 14px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; }
+  .section-body { padding: 16px; }
+  .btn-primary {
+    width: 100%; padding: 12px 0; border-radius: 8px; border: none; background: var(--dark);
+    color: #fff; font-weight: 700; cursor: pointer;
+  }
+  .btn-primary:disabled { background: #9CA3AF; cursor: default; }
+  .btn-secondary {
+    border: 1px solid #D1D5DB; background: #fff; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px;
+  }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid; }
+  .hidden { display: none !important; }
+  .app-shell { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: #fff; border-right: 1px solid var(--line); padding: 20px 16px; display: flex; flex-direction: column; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 14px;
+    border-radius: 8px; border: none; cursor: pointer; background: transparent; color: #374151;
+    font-size: 14px; font-weight: 600; margin-bottom: 4px;
+  }
+  .nav-item.active { background: var(--dark); color: #fff; }
+  .main { flex: 1; padding: 28px; overflow: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+  th { padding: 9px 12px; font-weight: 700; color: var(--sub); border-bottom: 1px solid var(--line); text-align: left; background: var(--panel); }
+  td { padding: 9px 12px; border-bottom: 1px solid #F3F4F6; }
+  tr.memo-row { cursor: pointer; }
+  tr.memo-row:hover { background: #FAFAFA; }
+  .stat-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .stat-label { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
+  .stat-val { font-family: Georgia, serif; font-size: 24px; font-weight: 700; }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .goal-box { border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 20px; background: #fff; }
+  .goal-bar-track { height: 10px; background: #F3F4F6; border-radius: 6px; overflow: hidden; }
+  .goal-bar-fill { height: 100%; background: var(--dark); }
+  .charts-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+  .chart-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .auth-screen { max-width: 420px; margin: 80px auto; }
+  .auth-card { border: 1px solid var(--line); border-radius: 12px; padding: 28px; background: #fff; }
+  .error-banner {
+    display: flex; align-items: center; gap: 8px; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA;
+    border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px;
+  }
+  .flash-banner {
+    background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; border-radius: 8px; padding: 10px 14px;
+    margin-bottom: 16px; font-size: 13px;
+  }
+  .slideover-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; justify-content: flex-end; z-index: 50;
+  }
+  .slideover-panel { width: 480px; max-width: 92vw; background: #fff; height: 100%; overflow: auto; padding: 24px; }
+  .link-btn { border: none; background: none; color: var(--sub); cursor: pointer; font-size: 13px; }
+  .top-user-row { border-top: 1px solid var(--line); padding-top: 12px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--sub); }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div style="font-size:13px;color:var(--sub);font-weight:700;letter-spacing:0.04em;margin-bottom:4px;">IC MEMO SYSTEM</div>
+    <h2 style="font-size:20px;margin-bottom:16px;" id="authTitle">Sign in</h2>
+    <div id="authError" class="hidden" style="color:#991B1B;font-size:13px;margin-bottom:12px;"></div>
+
+    <div id="nameFieldWrap" class="field hidden">
+      <label class="field-label">Your name</label>
+      <input type="text" id="auth_name" placeholder="Jane Smith" />
+    </div>
+    <div class="field">
+      <label class="field-label">Email</label>
+      <input type="email" id="auth_email" placeholder="you@company.com" />
+    </div>
+    <div class="field">
+      <label class="field-label">Password</label>
+      <input type="password" id="auth_password" placeholder="At least 6 characters" />
+    </div>
+
+    <button class="btn-primary" id="authSubmitBtn" style="margin-bottom:10px;">Sign in</button>
+    <button class="link-btn" id="authToggleBtn" style="width:100%;text-align:center;">Need an account? Create one</button>
+    <p style="font-size:12px;color:var(--sub);margin-top:14px;margin-bottom:0;">The first person to create an account becomes the admin and can see everything. Anyone who signs up after that starts as an unassigned researcher until the admin assigns them to a reviewer.</p>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="appWrap" class="app-shell hidden">
+  <div class="sidebar">
+    <div style="font-size:11px;font-weight:800;letter-spacing:0.06em;color:#9CA3AF;margin-bottom:2px;">IC MEMO SYSTEM</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:20px;font-family:Georgia,serif;">Investment Ledger</div>
+    <button class="nav-item active" data-view="new">New Memo</button>
+    <button class="nav-item" data-view="log">Memo Log</button>
+    <button class="nav-item" data-view="dashboard">Dashboard</button>
+    <button class="nav-item hidden" data-view="team" id="teamNavItem">Team</button>
+    <div style="flex:1;"></div>
+    <div class="top-user-row">
+      <span id="currentUserLabel">—</span>
+      <span id="currentRoleBadge" style="margin-left:6px;"></span>
+      <button class="link-btn" id="signOutBtn" style="margin-left:auto;">sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div id="globalError" class="error-banner hidden"></div>
+    <div id="unassignedBanner" class="hidden" style="background:#FFFBEB;color:#92400E;border:1px solid #FDE68A;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;">
+      Your account isn't assigned to a reviewer yet. Your memos are saved and visible to the admin, who'll assign you shortly.
+    </div>
+
+    <!-- NEW MEMO VIEW -->
+    <div id="view-new">
+      <h2 style="font-size:24px;margin-bottom:4px;">New IC Memo</h2>
+      <p style="color:var(--sub);font-size:13px;margin-bottom:20px;">Same fields, every time. Every purchase. Forever.</p>
+      <div id="newFlash" class="flash-banner hidden"></div>
+      <form id="memoForm"></form>
+    </div>
+
+    <!-- LOG VIEW -->
+    <div id="view-log" class="hidden">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <h2 style="font-size:24px;margin-bottom:4px;">Memo Log</h2>
+          <p style="color:var(--sub);font-size:13px;margin:0;" id="logCount"></p>
+        </div>
+        <button class="btn-secondary" id="refreshBtn">Refresh</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:14px;">
+        <input id="searchInput" placeholder="Search card, player, researcher\u2026" style="max-width:260px;" />
+        <select id="filterRec" style="max-width:180px;">
+          <option value="ALL">All recommendations</option>
+          <option value="BUY">BUY</option>
+          <option value="WATCHLIST">WATCHLIST</option>
+          <option value="PASS">PASS</option>
+        </select>
+      </div>
+      <div id="logTableWrap" style="border:1px solid var(--line);border-radius:10px;overflow:hidden;"></div>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div id="view-dashboard" class="hidden">
+      <h2 style="font-size:24px;margin-bottom:4px;">Dashboard</h2>
+      <p style="color:var(--sub);font-size:13px;margin-bottom:20px;" id="dashSubtitle"></p>
+      <div class="goal-box">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+          <span style="font-size:13px;font-weight:700;color:var(--sub);letter-spacing:0.03em;">YEAR 1 GOAL</span>
+          <span style="font-family:Georgia,serif;font-size:22px;font-weight:700;" id="goalCount">0 / 500 memos</span>
+        </div>
+        <div class="goal-bar-track"><div class="goal-bar-fill" id="goalBarFill" style="width:0%;"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--sub);">
+          <span>500 IC Memos with 100% compliance — not profit — is the Year 1 target.</span>
+          <span id="complianceLabel" style="font-weight:700;">0% compliance</span>
+        </div>
+      </div>
+      <div class="stats-grid" id="statsGrid"></div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Recommendations</div>
+          <canvas id="recChart" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;">PM Decisions</div>
+          <canvas id="decChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEAM VIEW (admin only) -->
+    <div id="view-team" class="hidden">
+      <h2 style="font-size:24px;margin-bottom:4px;">Team</h2>
+      <p style="color:var(--sub);font-size:13px;margin-bottom:20px;">Assign each researcher to a reviewer. Unassigned researchers' memos are only visible to admins.</p>
+      <div id="teamTableWrap" style="border:1px solid var(--line);border-radius:10px;overflow:hidden;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL SLIDEOVER -->
+<div id="detailBackdrop" class="slideover-backdrop hidden">
+  <div class="slideover-panel">
+    <button class="link-btn" id="closeDetailBtn" style="margin-bottom:16px;">&larr; Back to log</button>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<script type="module">
+  // ---- Firebase setup ----
+  // Replace this with YOUR OWN Firebase project's config (Project settings > Your apps).
+  const firebaseConfig = {
+    apiKey: "AIzaSyDM29o22dIt3zyCSXVHE-RbQu5XhMBh07E",
+    authDomain: "revival-memo-system.firebaseapp.com",
+    projectId: "revival-memo-system",
+    storageBucket: "revival-memo-system.firebasestorage.app",
+    messagingSenderId: "109766972972",
+    appId: "1:109766972972:web:786c19f9c011caaf316389"
+  };
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+    signOut, onAuthStateChanged, updateProfile
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  window.__fb = {
+    auth, db, doc, getDoc, setDoc, collection, getDocs, query, where,
+    createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile
+  };
+  window.dispatchEvent(new Event("firebase-ready"));
+</script>
+
+<script>
+  // ================= App logic (runs after Firebase is ready) =================
+  const REC_COLORS = { BUY: "#15803D", WATCHLIST: "#B45309", PASS: "#B91C1C" };
+  const DEC_COLORS = { Approved: "#15803D", Rejected: "#B91C1C" };
+  const YEAR1_GOAL = 500;
+
+  let memos = [];
+  let currentUser = null;
+  let isSignUpMode = false;
+  let detailMemo = null;
+  let recChart = null, decChart = null;
+
+  function el(id) { return document.getElementById(id); }
+  function showError(msg) {
+    const box = el("globalError");
+    box.textContent = msg;
+    box.classList.remove("hidden");
+  }
+  function clearError() { el("globalError").classList.add("hidden"); }
+  function showAuthError(msg) {
+    const box = el("authError");
+    box.textContent = msg;
+    box.classList.remove("hidden");
+  }
+  function clearAuthError() { el("authError").classList.add("hidden"); }
+
+  function friendlyAuthError(e) {
+    const code = e && e.code ? e.code : "";
+    if (code.includes("email-already-in-use")) return "That email already has an account — try signing in instead.";
+    if (code.includes("invalid-credential") || code.includes("wrong-password") || code.includes("user-not-found")) return "Incorrect email or password.";
+    if (code.includes("weak-password")) return "Password should be at least 6 characters.";
+    if (code.includes("invalid-email")) return "That email address doesn't look right.";
+    return "Something went wrong. Please try again.";
+  }
+
+  function blankMemo() {
+    return {
+      id: "IC-" + Date.now().toString(36).toUpperCase() + "-" + Math.random().toString(36).slice(2, 5).toUpperCase(),
+      createdAt: Date.now(),
+      date: new Date().toISOString().slice(0, 10),
+      researcher: currentUser ? currentUser.displayName || currentUser.email : "",
+      researcherUid: currentUser ? currentUser.uid : null,
+      reviewerUid: currentProfile ? currentProfile.reviewerUid : null,
+      recommendation: "", card: "", player: "", year: "", set: "", grade: "", population: "", serial: "",
+      tierUsed: "1", fairValue: "", currentPrice: "", liquidityScore: "", convictionScore: "", expectedNetProfit: "",
+      whyMispriced: ["", "", ""], risks: ["", "", ""], exitStrategy: "",
+      pmDecision: "", pmReason: "", pmDate: "", notes: "",
+      outcome: { didBuy: "", reviewDate: "", whatHappened: "" }
+    };
+  }
+
+  function discountPct(fv, cp) {
+    fv = parseFloat(fv); cp = parseFloat(cp);
+    if (!fv || !cp || fv <= 0) return null;
+    return (1 - cp / fv) * 100;
+  }
+
+  function badge(text, colorMap) {
+    if (!text) return '<span style="color:#9CA3AF;font-size:13px;">—</span>';
+    const c = colorMap[text] || "#9CA3AF";
+    return `<span class="badge" style="background:${c}1A;color:${c};border-color:${c}44;">${text}</span>`;
+  }
+
+  // ---------- AUTH ----------
+  let currentProfile = null; // { role, reviewerUid, name }
+  let allProfiles = []; // admin-only, for Team screen
+
+  function initAuthScreen() {
+    const fb = window.__fb;
+
+    el("authToggleBtn").addEventListener("click", () => {
+      isSignUpMode = !isSignUpMode;
+      el("authTitle").textContent = isSignUpMode ? "Create your account" : "Sign in";
+      el("authSubmitBtn").textContent = isSignUpMode ? "Create account" : "Sign in";
+      el("authToggleBtn").textContent = isSignUpMode ? "Already have an account? Sign in" : "Need an account? Create one";
+      el("nameFieldWrap").classList.toggle("hidden", !isSignUpMode);
+      clearAuthError();
+    });
+
+    el("authSubmitBtn").addEventListener("click", async () => {
+      clearAuthError();
+      const email = el("auth_email").value.trim();
+      const password = el("auth_password").value;
+      const name = el("auth_name").value.trim();
+      if (!email || !password) { showAuthError("Enter an email and password."); return; }
+      if (isSignUpMode && !name) { showAuthError("Enter your name."); return; }
+      try {
+        if (isSignUpMode) {
+          const cred = await fb.createUserWithEmailAndPassword(fb.auth, email, password);
+          await fb.updateProfile(cred.user, { displayName: name });
+          await bootstrapProfile(cred.user, name, email);
+        } else {
+          await fb.signInWithEmailAndPassword(fb.auth, email, password);
+        }
+      } catch (e) {
+        showAuthError(friendlyAuthError(e));
+      }
+    });
+
+    el("signOutBtn").addEventListener("click", async () => { await fb.signOut(fb.auth); });
+
+    fb.onAuthStateChanged(fb.auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        clearAuthError();
+        await loadOwnProfile();
+        el("authScreen").classList.add("hidden");
+        el("appWrap").classList.remove("hidden");
+        el("currentUserLabel").textContent = user.displayName || user.email;
+        el("currentRoleBadge").innerHTML = currentProfile ? `<span class="badge" style="background:#F3F4F6;color:#374151;border-color:#E5E7EB;">${currentProfile.role}</span>` : "";
+        el("teamNavItem").classList.toggle("hidden", !(currentProfile && currentProfile.role === "admin"));
+        el("unassignedBanner").classList.toggle("hidden", !(currentProfile && currentProfile.role === "researcher" && !currentProfile.reviewerUid));
+        el("auth_password").value = "";
+        await loadMemos();
+        renderCurrentView();
+      } else {
+        currentUser = null;
+        currentProfile = null;
+        memos = [];
+        el("appWrap").classList.add("hidden");
+        el("authScreen").classList.remove("hidden");
+      }
+    });
+  }
+
+  // First person ever to sign up becomes admin. Everyone after starts as an
+  // unassigned researcher until an admin assigns them to a reviewer.
+  async function bootstrapProfile(user, name, email) {
+    const fb = window.__fb;
+    const existing = await fb.getDocs(fb.collection(fb.db, "profiles"));
+    const role = existing.empty ? "admin" : "researcher";
+    await fb.setDoc(fb.doc(fb.db, "profiles", user.uid), {
+      uid: user.uid, name, email, role, reviewerUid: null, createdAt: Date.now()
+    });
+  }
+
+  async function loadOwnProfile() {
+    try {
+      const fb = window.__fb;
+      const snap = await fb.getDoc(fb.doc(fb.db, "profiles", currentUser.uid));
+      currentProfile = snap.exists() ? snap.data() : null;
+    } catch (e) {
+      currentProfile = null;
+      showError("Could not load your profile. Try refreshing.");
+    }
+  }
+
+  // ---------- DATA ----------
+  async function loadMemos() {
+    clearError();
+    try {
+      const fb = window.__fb;
+      let docs = [];
+      if (currentProfile && currentProfile.role === "admin") {
+        const snap = await fb.getDocs(fb.collection(fb.db, "memos"));
+        snap.forEach((d) => docs.push(d.data()));
+      } else {
+        const uid = currentUser.uid;
+        const [ownSnap, reviewedSnap] = await Promise.all([
+          fb.getDocs(fb.query(fb.collection(fb.db, "memos"), fb.where("researcherUid", "==", uid))),
+          fb.getDocs(fb.query(fb.collection(fb.db, "memos"), fb.where("reviewerUid", "==", uid))),
+        ]);
+        const seen = new Set();
+        [ownSnap, reviewedSnap].forEach((snap) => snap.forEach((d) => {
+          if (!seen.has(d.id)) { seen.add(d.id); docs.push(d.data()); }
+        }));
+      }
+      memos = docs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    } catch (e) {
+      showError("Could not load memos. Check your connection and try refreshing.");
+    }
+  }
+
+  async function saveMemo(memo) {
+    clearError();
+    try {
+      const fb = window.__fb;
+      await fb.setDoc(fb.doc(fb.db, "memos", memo.id), memo);
+      await loadMemos();
+      return true;
+    } catch (e) {
+      showError("Could not save this memo. Try again.");
+      return false;
+    }
+  }
+
+  // ---------- NAV ----------
+  document.querySelectorAll(".nav-item").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".nav-item").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      ["new", "log", "dashboard", "team"].forEach((v) => el("view-" + v).classList.add("hidden"));
+      el("view-" + btn.dataset.view).classList.remove("hidden");
+      renderCurrentView(btn.dataset.view);
+    });
+  });
+
+  function renderCurrentView(view) {
+    view = view || document.querySelector(".nav-item.active").dataset.view;
+    if (view === "new") renderNewForm();
+    if (view === "log") renderLog();
+    if (view === "dashboard") renderDashboard();
+    if (view === "team") renderTeam();
+  }
+
+  // ---------- NEW MEMO FORM ----------
+  function fieldHTML(labelText, inner) {
+    return `<div class="field"><label class="field-label">${labelText}</label>${inner}</div>`;
+  }
+
+  function renderNewForm() {
+    const form = el("memoForm");
+    const m = blankMemo();
+    form.innerHTML = `
+      <div class="section-card"><div class="section-head">IDENTIFIERS</div><div class="section-body grid2">
+        ${fieldHTML("Date", `<input type="date" id="f_date" value="${m.date}" />`)}
+        ${fieldHTML("Researcher", `<input id="f_researcher" value="${m.researcher}" />`)}
+      </div></div>
+
+      <div class="section-card"><div class="section-head">CARD DETAILS</div><div class="section-body grid2">
+        ${fieldHTML("Card", `<input id="f_card" />`)}
+        ${fieldHTML("Player", `<input id="f_player" />`)}
+        ${fieldHTML("Year", `<input id="f_year" />`)}
+        ${fieldHTML("Set", `<input id="f_set" />`)}
+        ${fieldHTML("Grade", `<input id="f_grade" />`)}
+        ${fieldHTML("Population", `<input id="f_population" />`)}
+        ${fieldHTML("Serial #", `<input id="f_serial" />`)}
+      </div></div>
+
+      <div class="section-card"><div class="section-head">PRICING</div><div class="section-body grid2">
+        ${fieldHTML("Tier Used", `<select id="f_tier"><option value="1">1 — Primary</option><option value="2">2 — Fallback</option><option value="3">3 — Illiquid</option></select>`)}
+        ${fieldHTML("Fair Value ($)", `<input type="number" step="0.01" id="f_fairvalue" />`)}
+        ${fieldHTML("Current Price ($)", `<input type="number" step="0.01" id="f_currentprice" />`)}
+        ${fieldHTML("Discount", `<div id="f_discount" style="padding:8px 10px;background:#F3F4F6;border-radius:6px;">—</div>`)}
+        ${fieldHTML("Liquidity Score (1–5)", `<select id="f_liquidity"><option value="">—</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>`)}
+        ${fieldHTML("Conviction Score (1–5)", `<select id="f_conviction"><option value="">—</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>`)}
+        ${fieldHTML("Expected Net Profit ($)", `<input type="number" step="0.01" id="f_expectedprofit" />`)}
+      </div></div>
+
+      <div class="section-card"><div class="section-head">WHY MISPRICED? (max 3)</div><div class="section-body">
+        <input id="f_mispriced0" placeholder="Reason 1" style="margin-bottom:8px;" />
+        <input id="f_mispriced1" placeholder="Reason 2" style="margin-bottom:8px;" />
+        <input id="f_mispriced2" placeholder="Reason 3" />
+      </div></div>
+
+      <div class="section-card"><div class="section-head">RISKS (max 3)</div><div class="section-body">
+        <input id="f_risk0" placeholder="Risk 1" style="margin-bottom:8px;" />
+        <input id="f_risk1" placeholder="Risk 2" style="margin-bottom:8px;" />
+        <input id="f_risk2" placeholder="Risk 3" />
+      </div></div>
+
+      <div class="section-card"><div class="section-head">EXIT STRATEGY &amp; RECOMMENDATION</div><div class="section-body grid2">
+        ${fieldHTML("Exit Strategy", `<select id="f_exit"><option value="">—</option><option>Sell Raw</option><option>Grade</option><option>Hold</option></select>`)}
+        ${fieldHTML("Recommendation *", `<select id="f_rec"><option value="">—</option><option value="BUY">BUY</option><option value="WATCHLIST">WATCHLIST</option><option value="PASS">PASS</option></select>`)}
+      </div></div>
+
+      <div class="section-card"><div class="section-head">NOTES / ADDITIONAL CONTEXT</div><div class="section-body">
+        <textarea id="f_notes"></textarea>
+      </div></div>
+
+      <button type="submit" class="btn-primary">Save Memo</button>
+    `;
+
+    function updateDiscount() {
+      const d = discountPct(el("f_fairvalue").value, el("f_currentprice").value);
+      el("f_discount").textContent = d === null ? "—" : d.toFixed(1) + "%";
+      el("f_discount").style.color = d !== null && d >= 20 ? "#15803D" : "#374151";
+    }
+    el("f_fairvalue").addEventListener("input", updateDiscount);
+    el("f_currentprice").addEventListener("input", updateDiscount);
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      clearError();
+      const card = el("f_card").value.trim();
+      const rec = el("f_rec").value;
+      if (!card || !rec) { showError("Card and Recommendation are required before saving."); return; }
+      const memo = {
+        ...m,
+        date: el("f_date").value, researcher: el("f_researcher").value || m.researcher,
+        card, player: el("f_player").value, year: el("f_year").value, set: el("f_set").value,
+        grade: el("f_grade").value, population: el("f_population").value, serial: el("f_serial").value,
+        tierUsed: el("f_tier").value, fairValue: el("f_fairvalue").value, currentPrice: el("f_currentprice").value,
+        liquidityScore: el("f_liquidity").value, convictionScore: el("f_conviction").value,
+        expectedNetProfit: el("f_expectedprofit").value,
+        whyMispriced: [el("f_mispriced0").value, el("f_mispriced1").value, el("f_mispriced2").value],
+        risks: [el("f_risk0").value, el("f_risk1").value, el("f_risk2").value],
+        exitStrategy: el("f_exit").value, recommendation: rec, notes: el("f_notes").value,
+      };
+      const submitBtn = form.querySelector('button[type="submit"]');
+      submitBtn.disabled = true; submitBtn.textContent = "Saving\u2026";
+      const ok = await saveMemo(memo);
+      submitBtn.disabled = false; submitBtn.textContent = "Save Memo";
+      if (ok) {
+        const flash = el("newFlash");
+        flash.textContent = "Saved as " + memo.id;
+        flash.classList.remove("hidden");
+        setTimeout(() => flash.classList.add("hidden"), 3000);
+        renderNewForm();
+      }
+    };
+  }
+
+  // ---------- LOG VIEW ----------
+  function getFilteredMemos() {
+    const filterRec = el("filterRec").value;
+    const search = el("searchInput").value.toLowerCase();
+    return memos.filter((m) => {
+      if (filterRec !== "ALL" && m.recommendation !== filterRec) return false;
+      if (search) {
+        const hay = [m.card, m.player, m.researcher, m.id].join(" ").toLowerCase();
+        if (!hay.includes(search)) return false;
+      }
+      return true;
+    });
+  }
+
+  function renderLog() {
+    el("logCount").textContent = memos.length + " memos logged";
+    const list = getFilteredMemos();
+    const wrap = el("logTableWrap");
+    if (list.length === 0) {
+      wrap.innerHTML = `<div style="padding:20px;text-align:center;color:var(--sub);">No memos match. Try clearing filters, or log your first opportunity from "New Memo."</div>`;
+      return;
+    }
+    wrap.innerHTML = `
+      <table>
+        <thead><tr><th>Date</th><th>Card / Player</th><th>Researcher</th><th>Rec</th><th>Decision</th><th>Outcome</th><th></th></tr></thead>
+        <tbody>
+          ${list.map((m) => `
+            <tr class="memo-row" data-id="${m.id}">
+              <td>${m.date || "—"}</td>
+              <td style="font-weight:600;color:var(--ink);">${m.card || "—"}${m.player ? " — " + m.player : ""}</td>
+              <td>${m.researcher || "—"}</td>
+              <td>${badge(m.recommendation, REC_COLORS)}</td>
+              <td>${badge(m.pmDecision, DEC_COLORS)}</td>
+              <td style="color:var(--sub);">${m.outcome && m.outcome.didBuy ? "Completed" : "Pending"}</td>
+              <td style="text-align:right;color:#9CA3AF;">&rsaquo;</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+    wrap.querySelectorAll(".memo-row").forEach((row) => {
+      row.addEventListener("click", () => openDetail(row.dataset.id));
+    });
+  }
+
+  el("searchInput").addEventListener("input", renderLog);
+  el("filterRec").addEventListener("change", renderLog);
+  el("refreshBtn").addEventListener("click", async () => { await loadMemos(); renderLog(); });
+
+  // ---------- DETAIL SLIDEOVER ----------
+  function openDetail(id) {
+    detailMemo = JSON.parse(JSON.stringify(memos.find((m) => m.id === id)));
+    if (!detailMemo.outcome) detailMemo.outcome = { didBuy: "", reviewDate: "", whatHappened: "" };
+    renderDetail();
+    el("detailBackdrop").classList.remove("hidden");
+  }
+  el("closeDetailBtn").addEventListener("click", () => {
+    el("detailBackdrop").classList.add("hidden");
+    detailMemo = null;
+  });
+
+  function renderDetail() {
+    const m = detailMemo;
+    el("detailBody").innerHTML = `
+      <div style="font-size:11px;color:#9CA3AF;font-weight:700;margin-bottom:4px;">${m.id}</div>
+      <h3 style="font-size:20px;margin-bottom:16px;">${m.card || "Untitled"}${m.player ? " — " + m.player : ""}</h3>
+
+      <div class="section-card"><div class="section-head">RECOMMENDATION &amp; PRICING</div><div class="section-body grid2" style="font-size:13px;">
+        <div><label class="field-label">Recommendation</label>${badge(m.recommendation, REC_COLORS)}</div>
+        <div><label class="field-label">Tier Used</label>${m.tierUsed || "—"}</div>
+        <div><label class="field-label">Fair Value</label>$${m.fairValue || "—"}</div>
+        <div><label class="field-label">Current Price</label>$${m.currentPrice || "—"}</div>
+        <div><label class="field-label">Liquidity</label>${m.liquidityScore || "—"}</div>
+        <div><label class="field-label">Conviction</label>${m.convictionScore || "—"}</div>
+      </div></div>
+
+      <div class="section-card"><div class="section-head">PORTFOLIO MANAGER DECISION</div><div class="section-body">
+        ${fieldHTML("Decision", `<select id="d_decision"><option value="">—</option><option ${m.pmDecision === "Approved" ? "selected" : ""}>Approved</option><option ${m.pmDecision === "Rejected" ? "selected" : ""}>Rejected</option></select>`)}
+        ${fieldHTML("Reason", `<textarea id="d_reason">${m.pmReason || ""}</textarea>`)}
+        ${fieldHTML("Decision Date", `<input type="date" id="d_date" value="${m.pmDate || ""}" />`)}
+      </div></div>
+
+      <div class="section-card"><div class="section-head">OUTCOME REVIEW — 90 DAYS LATER</div><div class="section-body">
+        ${fieldHTML("Did we buy?", `<select id="d_didbuy"><option value="">—</option><option ${m.outcome.didBuy === "Yes" ? "selected" : ""}>Yes</option><option ${m.outcome.didBuy === "No" ? "selected" : ""}>No</option></select>`)}
+        ${fieldHTML("Review Date", `<input type="date" id="d_reviewdate" value="${m.outcome.reviewDate || ""}" />`)}
+        ${fieldHTML("What happened?", `<textarea id="d_whathappened">${m.outcome.whatHappened || ""}</textarea>`)}
+      </div></div>
+
+      <button class="btn-primary" id="saveDetailBtn">Save Changes</button>
+    `;
+    el("saveDetailBtn").addEventListener("click", async () => {
+      const btn = el("saveDetailBtn");
+      btn.disabled = true; btn.textContent = "Saving\u2026";
+      detailMemo.pmDecision = el("d_decision").value;
+      detailMemo.pmReason = el("d_reason").value;
+      detailMemo.pmDate = el("d_date").value;
+      detailMemo.outcome = {
+        didBuy: el("d_didbuy").value, reviewDate: el("d_reviewdate").value, whatHappened: el("d_whathappened").value
+      };
+      const ok = await saveMemo(detailMemo);
+      btn.disabled = false; btn.textContent = "Save Changes";
+      if (ok) { el("detailBackdrop").classList.add("hidden"); detailMemo = null; renderLog(); }
+    });
+  }
+
+  // ---------- DASHBOARD ----------
+  function renderDashboard() {
+    const total = memos.length;
+    const withDecision = memos.filter((m) => m.pmDecision).length;
+    const compliance = total ? Math.round((withDecision / total) * 100) : 0;
+    const recCounts = { BUY: 0, WATCHLIST: 0, PASS: 0 };
+    memos.forEach((m) => { if (recCounts[m.recommendation] !== undefined) recCounts[m.recommendation]++; });
+    const decCounts = { Approved: 0, Rejected: 0 };
+    memos.forEach((m) => { if (m.pmDecision === "Approved") decCounts.Approved++; if (m.pmDecision === "Rejected") decCounts.Rejected++; });
+    const convictions = memos.map((m) => parseFloat(m.convictionScore)).filter((n) => !isNaN(n));
+    const avgConviction = convictions.length ? (convictions.reduce((a, b) => a + b, 0) / convictions.length) : null;
+    const liquidities = memos.map((m) => parseFloat(m.liquidityScore)).filter((n) => !isNaN(n));
+    const avgLiquidity = liquidities.length ? (liquidities.reduce((a, b) => a + b, 0) / liquidities.length) : null;
+    const outcomesDue = memos.filter((m) => m.recommendation === "BUY" || m.pmDecision === "Approved").length;
+    const outcomesDone = memos.filter((m) => m.outcome && m.outcome.didBuy).length;
+
+    el("dashSubtitle").textContent = total + " memos logged";
+    el("goalCount").textContent = total + " / " + YEAR1_GOAL + " memos";
+    el("goalBarFill").style.width = Math.min(100, (total / YEAR1_GOAL) * 100) + "%";
+    const compLabel = el("complianceLabel");
+    compLabel.textContent = compliance + "% compliance";
+    compLabel.style.color = compliance >= 95 ? "#15803D" : compliance >= 80 ? "#B45309" : "#B91C1C";
+
+    el("statsGrid").innerHTML = [
+      ["Avg. Conviction", avgConviction !== null ? avgConviction.toFixed(1) : "—"],
+      ["Avg. Liquidity", avgLiquidity !== null ? avgLiquidity.toFixed(1) : "—"],
+      ["Outcome Reviews Done", outcomesDone + " / " + outcomesDue],
+      ["Total Logged", total],
+    ].map(([label, val]) => `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-val">${val}</div></div>`).join("");
+
+    if (recChart) recChart.destroy();
+    recChart = new Chart(el("recChart"), {
+      type: "bar",
+      data: {
+        labels: ["BUY", "WATCHLIST", "PASS"],
+        datasets: [{ data: [recCounts.BUY, recCounts.WATCHLIST, recCounts.PASS], backgroundColor: ["#15803D", "#B45309", "#B91C1C"] }]
+      },
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    });
+
+    if (decChart) decChart.destroy();
+    const decLabels = [], decData = [], decColors = [];
+    if (decCounts.Approved > 0) { decLabels.push("Approved"); decData.push(decCounts.Approved); decColors.push("#15803D"); }
+    if (decCounts.Rejected > 0) { decLabels.push("Rejected"); decData.push(decCounts.Rejected); decColors.push("#B91C1C"); }
+    if (decData.length === 0) { decLabels.push("No decisions yet"); decData.push(1); decColors.push("#E5E7EB"); }
+    decChart = new Chart(el("decChart"), {
+      type: "doughnut",
+      data: { labels: decLabels, datasets: [{ data: decData, backgroundColor: decColors }] },
+      options: { plugins: { legend: { position: "bottom" } } }
+    });
+  }
+
+  // ---------- TEAM (admin only) ----------
+  async function loadAllProfiles() {
+    const fb = window.__fb;
+    const snap = await fb.getDocs(fb.collection(fb.db, "profiles"));
+    allProfiles = [];
+    snap.forEach((d) => allProfiles.push(d.data()));
+    allProfiles.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  }
+
+  async function renderTeam() {
+    if (!currentProfile || currentProfile.role !== "admin") {
+      el("teamTableWrap").innerHTML = `<div style="padding:20px;color:var(--sub);">Only admins can view the team.</div>`;
+      return;
+    }
+    clearError();
+    try {
+      await loadAllProfiles();
+    } catch (e) {
+      showError("Could not load the team list.");
+      return;
+    }
+    const reviewers = allProfiles.filter((p) => p.role === "admin" || p.role === "reviewer");
+    el("teamTableWrap").innerHTML = `
+      <table>
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Reviewer</th></tr></thead>
+        <tbody>
+          ${allProfiles.map((p) => `
+            <tr data-uid="${p.uid}">
+              <td style="font-weight:600;">${p.name || "\u2014"}</td>
+              <td style="color:var(--sub);">${p.email || "\u2014"}</td>
+              <td>
+                <select class="team-role-select" data-uid="${p.uid}" ${p.role === "admin" ? "disabled" : ""} style="width:auto;">
+                  <option value="researcher" ${p.role === "researcher" ? "selected" : ""}>researcher</option>
+                  <option value="reviewer" ${p.role === "reviewer" ? "selected" : ""}>reviewer</option>
+                  ${p.role === "admin" ? '<option value="admin" selected>admin</option>' : ""}
+                </select>
+              </td>
+              <td>
+                ${p.role === "admin" ? '<span style="color:var(--sub);">sees everything</span>' : `
+                  <select class="team-reviewer-select" data-uid="${p.uid}" style="width:auto;">
+                    <option value="">Unassigned</option>
+                    ${reviewers.map((r) => `<option value="${r.uid}" ${p.reviewerUid === r.uid ? "selected" : ""}>${r.name} (${r.role})</option>`).join("")}
+                  </select>
+                `}
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+    el("teamTableWrap").querySelectorAll(".team-role-select").forEach((sel) => {
+      sel.addEventListener("change", async () => {
+        await updateProfileFields(sel.dataset.uid, { role: sel.value });
+        renderTeam();
+      });
+    });
+    el("teamTableWrap").querySelectorAll(".team-reviewer-select").forEach((sel) => {
+      sel.addEventListener("change", async () => {
+        await updateProfileFields(sel.dataset.uid, { reviewerUid: sel.value || null });
+        renderTeam();
+      });
+    });
+  }
+
+  async function updateProfileFields(uid, fields) {
+    clearError();
+    try {
+      const fb = window.__fb;
+      const existing = allProfiles.find((p) => p.uid === uid) || {};
+      await fb.setDoc(fb.doc(fb.db, "profiles", uid), { ...existing, ...fields }, { merge: true });
+    } catch (e) {
+      showError("Could not update that team member. Try again.");
+    }
+  }
+
+  // ---------- BOOT ----------
+  if (window.__fb) initAuthScreen();
+  else window.addEventListener("firebase-ready", initAuthScreen, { once: true });
+</script>
+</body>
+</html>
