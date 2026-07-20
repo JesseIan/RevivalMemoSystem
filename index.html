@@ -281,7 +281,7 @@
       researcher: currentUser ? currentUser.displayName || currentUser.email : "",
       researcherUid: currentUser ? currentUser.uid : null,
       reviewerUid: currentProfile ? currentProfile.reviewerUid : null,
-      recommendation: "", card: "", player: "", year: "", set: "", grade: "", population: "", serial: "",
+      recommendation: "", card: "", player: "", year: "", set: "", cardNumber: "", grade: "", population: "", serial: "",
       platform: "", endDateTime: "", listingUrl: "",
       tierUsed: "1", fairValue: "", currentPrice: "", liquidityScore: "", convictionScore: "", expectedNetProfit: "",
       whyMispriced: ["", "", ""], risks: ["", "", ""], exitStrategy: "",
@@ -467,6 +467,7 @@
         ${fieldHTML("Player", `<input id="f_player" />`)}
         ${fieldHTML("Year", `<input id="f_year" />`)}
         ${fieldHTML("Set", `<input id="f_set" />`)}
+        ${fieldHTML("Card #", `<input id="f_cardnumber" placeholder="e.g. 23" />`)}
         ${fieldHTML("Grade", `<input id="f_grade" />`)}
         ${fieldHTML("Population", `<input id="f_population" />`)}
         ${fieldHTML("Serial #", `<input id="f_serial" />`)}
@@ -546,6 +547,7 @@
         ...m,
         date: el("f_date").value, researcher: el("f_researcher").value || m.researcher,
         card, player: el("f_player").value, year: el("f_year").value, set: el("f_set").value,
+        cardNumber: el("f_cardnumber").value,
         grade: el("f_grade").value, population: el("f_population").value, serial: el("f_serial").value,
         platform: el("f_platform").value, endDateTime: el("f_endtime").value, listingUrl: el("f_listingurl").value.trim(),
         tierUsed: el("f_tier").value, fairValue: el("f_fairvalue").value, currentPrice: el("f_currentprice").value,
