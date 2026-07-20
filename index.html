@@ -10,22 +10,23 @@
     --dark: #1F2937; --buy: #15803D; --watch: #B45309; --pass: #B91C1C;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #F3F4F6; color: var(--ink); }
+  html { font-size: 15px; }
+  body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #F3F4F6; color: var(--ink); font-size: 14px; }
   h1, h2, h3 { font-family: Georgia, serif; margin: 0; }
-  input, select, textarea, button { font-family: inherit; font-size: 14px; }
+  input, select, textarea, button { font-family: inherit; font-size: 13px; }
   input, select, textarea {
-    width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid #D1D5DB; background: #fff;
+    width: 100%; padding: 7px 9px; border-radius: 6px; border: 1px solid #D1D5DB; background: #fff;
   }
-  textarea { resize: vertical; min-height: 60px; }
-  label.field-label { display: block; font-size: 12px; font-weight: 600; color: var(--sub); margin-bottom: 4px; letter-spacing: 0.02em; }
-  .field { margin-bottom: 14px; }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .section-card { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 16px; overflow: hidden; background: #fff; }
-  .section-head { background: var(--dark); color: #fff; padding: 8px 14px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; }
-  .section-body { padding: 16px; }
+  textarea { resize: vertical; min-height: 50px; }
+  label.field-label { display: block; font-size: 11.5px; font-weight: 600; color: var(--sub); margin-bottom: 3px; letter-spacing: 0.02em; }
+  .field { margin-bottom: 10px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .section-card { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 12px; overflow: hidden; background: #fff; }
+  .section-head { background: var(--dark); color: #fff; padding: 6px 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+  .section-body { padding: 13px; }
   .btn-primary {
-    width: 100%; padding: 12px 0; border-radius: 8px; border: none; background: var(--dark);
-    color: #fff; font-weight: 700; cursor: pointer;
+    width: 100%; padding: 10px 0; border-radius: 8px; border: none; background: var(--dark);
+    color: #fff; font-weight: 700; cursor: pointer; font-size: 13px;
   }
   .btn-primary:disabled { background: #9CA3AF; cursor: default; }
   .btn-secondary {
@@ -35,14 +36,14 @@
   .hidden { display: none !important; }
   html, body { height: 100%; }
   .app-shell { display: flex; height: 100vh; overflow: hidden; }
-  .sidebar { width: 220px; height: 100%; flex-shrink: 0; background: #fff; border-right: 1px solid var(--line); padding: 20px 16px; display: flex; flex-direction: column; overflow-y: auto; }
+  .sidebar { width: 200px; height: 100%; flex-shrink: 0; background: #fff; border-right: 1px solid var(--line); padding: 16px 14px; display: flex; flex-direction: column; overflow-y: auto; }
   .nav-item {
-    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 12px;
     border-radius: 8px; border: none; cursor: pointer; background: transparent; color: #374151;
-    font-size: 14px; font-weight: 600; margin-bottom: 4px;
+    font-size: 13px; font-weight: 600; margin-bottom: 3px;
   }
   .nav-item.active { background: var(--dark); color: #fff; }
-  .main { flex: 1; height: 100%; padding: 28px; overflow-y: auto; }
+  .main { flex: 1; height: 100%; padding: 20px 24px; overflow-y: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
   th { padding: 9px 12px; font-weight: 700; color: var(--sub); border-bottom: 1px solid var(--line); text-align: left; background: var(--panel); }
   td { padding: 9px 12px; border-bottom: 1px solid #F3F4F6; }
@@ -50,7 +51,7 @@
   tr.memo-row:hover { background: #FAFAFA; }
   .stat-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
   .stat-label { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
-  .stat-val { font-family: Georgia, serif; font-size: 24px; font-weight: 700; }
+  .stat-val { font-family: Georgia, serif; font-size: 20px; font-weight: 700; }
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
   .goal-box { border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 20px; background: #fff; }
   .goal-bar-track { height: 10px; background: #F3F4F6; border-radius: 6px; overflow: hidden; }
@@ -127,8 +128,8 @@
     </div>
 
     <!-- NEW MEMO VIEW -->
-    <div id="view-new">
-      <h2 style="font-size:24px;margin-bottom:4px;">New IC Memo</h2>
+    <div id="view-new" style="max-width: 640px;">
+      <h2 style="font-size:20px;margin-bottom:3px;">New IC Memo</h2>
       <p style="color:var(--sub);font-size:13px;margin-bottom:20px;">Same fields, every time. Every purchase. Forever.</p>
       <div id="newFlash" class="flash-banner hidden"></div>
       <form id="memoForm"></form>
@@ -138,13 +139,13 @@
     <div id="view-log" class="hidden">
       <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px;">
         <div>
-          <h2 style="font-size:24px;margin-bottom:4px;">Memo Log</h2>
+          <h2 style="font-size:20px;margin-bottom:3px;">Memo Log</h2>
           <p style="color:var(--sub);font-size:13px;margin:0;" id="logCount"></p>
         </div>
         <button class="btn-secondary" id="refreshBtn">Refresh</button>
       </div>
       <div style="display:flex;gap:10px;margin-bottom:14px;">
-        <input id="searchInput" placeholder="Search card, player, researcher\u2026" style="max-width:260px;" />
+        <input id="searchInput" placeholder="Search card, player, researcher…" style="max-width:260px;" />
         <select id="filterRec" style="max-width:180px;">
           <option value="ALL">All recommendations</option>
           <option value="BUY">BUY</option>
@@ -157,12 +158,12 @@
 
     <!-- DASHBOARD VIEW -->
     <div id="view-dashboard" class="hidden">
-      <h2 style="font-size:24px;margin-bottom:4px;">Dashboard</h2>
+      <h2 style="font-size:20px;margin-bottom:3px;">Dashboard</h2>
       <p style="color:var(--sub);font-size:13px;margin-bottom:20px;" id="dashSubtitle"></p>
       <div class="goal-box">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
           <span style="font-size:13px;font-weight:700;color:var(--sub);letter-spacing:0.03em;">YEAR 1 GOAL</span>
-          <span style="font-family:Georgia,serif;font-size:22px;font-weight:700;" id="goalCount">0 / 500 memos</span>
+          <span style="font-family:Georgia,serif;font-size:18px;font-weight:700;" id="goalCount">0 / 500 memos</span>
         </div>
         <div class="goal-bar-track"><div class="goal-bar-fill" id="goalBarFill" style="width:0%;"></div></div>
         <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--sub);">
@@ -185,8 +186,9 @@
 
     <!-- TEAM VIEW (admin only) -->
     <div id="view-team" class="hidden">
-      <h2 style="font-size:24px;margin-bottom:4px;">Team</h2>
-      <p style="color:var(--sub);font-size:13px;margin-bottom:20px;">Assign each researcher to a reviewer. Unassigned researchers' memos are only visible to admins.</p>
+      <h2 style="font-size:20px;margin-bottom:3px;">Team</h2>
+      <p style="color:var(--sub);font-size:13px;margin-bottom:8px;">Assign each researcher to a reviewer. Unassigned researchers' memos are only visible to admins.</p>
+      <p style="color:var(--sub);font-size:12px;margin-bottom:20px;">There's no "add person" button here on purpose — accounts are created by the person signing up themselves at the login screen. Share the site's URL with your researchers; once they sign up, they'll appear in this list for you to assign.</p>
       <div id="teamTableWrap" style="border:1px solid var(--line);border-radius:10px;overflow:hidden;"></div>
     </div>
   </div>
@@ -524,7 +526,7 @@
         exitStrategy: el("f_exit").value, recommendation: rec, notes: el("f_notes").value,
       };
       const submitBtn = form.querySelector('button[type="submit"]');
-      submitBtn.disabled = true; submitBtn.textContent = "Saving\u2026";
+      submitBtn.disabled = true; submitBtn.textContent = "Saving…";
       const ok = await saveMemo(memo);
       submitBtn.disabled = false; submitBtn.textContent = "Save Memo";
       if (ok) {
@@ -629,7 +631,7 @@
     `;
     el("saveDetailBtn").addEventListener("click", async () => {
       const btn = el("saveDetailBtn");
-      btn.disabled = true; btn.textContent = "Saving\u2026";
+      btn.disabled = true; btn.textContent = "Saving…";
       detailMemo.pmDecision = el("d_decision").value;
       detailMemo.pmReason = el("d_reason").value;
       detailMemo.pmDate = el("d_date").value;
@@ -722,8 +724,8 @@
         <tbody>
           ${allProfiles.map((p) => `
             <tr data-uid="${p.uid}">
-              <td style="font-weight:600;">${p.name || "\u2014"}</td>
-              <td style="color:var(--sub);">${p.email || "\u2014"}</td>
+              <td style="font-weight:600;">${p.name || "—"}</td>
+              <td style="color:var(--sub);">${p.email || "—"}</td>
               <td>
                 <select class="team-role-select" data-uid="${p.uid}" ${p.role === "admin" ? "disabled" : ""} style="width:auto;">
                   <option value="researcher" ${p.role === "researcher" ? "selected" : ""}>researcher</option>
