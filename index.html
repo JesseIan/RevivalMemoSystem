@@ -415,6 +415,33 @@
     return cardPart + (m.player ? " — " + m.player : "");
   }
 
+  function purchaseStatusHTML(m) {
+    if (m.pmDecision === "Approved") {
+      const pp = parseFloat(m.purchasePrice);
+      if (isNaN(pp)) return `<span style="font-weight:600;">Bought</span>`;
+      const research = parseFloat(m.currentPrice);
+      let deltaHTML = "";
+      if (!isNaN(research) && Math.abs(pp - research) >= 0.01) {
+        const diff = pp - research;
+        deltaHTML = ` <span style="font-size:11px;color:${diff > 0 ? dangerColor() : successColor()};">(${diff > 0 ? "+" : ""}$${diff.toFixed(2)} vs. research price)</span>`;
+      }
+      return `<span style="font-weight:600;">Bought $${pp.toFixed(2)}</span>${deltaHTML}`;
+    }
+    if (m.pmDecision === "Approved (Not Purchased)") return `<span style="color:${warnColor()};font-weight:600;">Not purchased</span> <span style="font-size:11px;color:var(--sub);">(outbid/missed)</span>`;
+    if (m.pmDecision === "Rejected") return `<span style="color:var(--sub);">Passed</span>`;
+    return `<span style="color:var(--sub);">Awaiting decision</span>`;
+  }
+
+  function outcomeStatusHTML(m) {
+    const purchaseLine = purchaseStatusHTML(m);
+    if (!needsOutcomeReview(m)) return `<div>${purchaseLine}</div>`;
+    const reviewed = m.outcome && m.outcome.didBuy;
+    const reviewLine = reviewed
+      ? `<span style="color:${successColor()};">90-day review complete</span>`
+      : `<span style="color:${warnColor()};">90-day review pending</span>`;
+    return `<div>${purchaseLine}</div><div style="font-size:11px;margin-top:2px;">${reviewLine}</div>`;
+  }
+
   function badge(text, colorMap) {
     if (!text) return '<span style="color:#9CA3AF;font-size:13px;">—</span>';
     const c = colorMap[text] || "#9CA3AF";
@@ -785,7 +812,7 @@
     }
     wrap.innerHTML = `
       <table>
-        <thead><tr><th>Date</th><th>Card / Player</th><th>Ends</th><th>Researcher</th><th>Rec</th><th>Decision</th><th>Outcome</th><th></th></tr></thead>
+        <thead><tr><th>Date</th><th>Card / Player</th><th>Ends</th><th>Researcher</th><th>Rec</th><th>Decision</th><th>Status</th><th></th></tr></thead>
         <tbody>
           ${list.map((m) => {
             const nameText = memoTitle(m);
@@ -800,7 +827,7 @@
               <td>${m.researcher || "—"}</td>
               <td>${badge(m.recommendation, getRecColors())}</td>
               <td>${badge(m.pmDecision, getDecColors())}</td>
-              <td style="color:var(--sub);">${m.outcome && m.outcome.didBuy ? "Completed" : "Pending"}</td>
+              <td style="font-size:12px;">${outcomeStatusHTML(m)}</td>
               <td style="text-align:right;color:#9CA3AF;">&rsaquo;</td>
             </tr>
           `;
