@@ -320,10 +320,10 @@
       reviewerUid: currentProfile ? currentProfile.reviewerUid : null,
       recommendation: "", card: "", player: "", year: "", set: "", cardNumber: "", grade: "", population: "", serial: "",
       platform: "", endDateTime: "", listingUrl: "",
-      tierUsed: "1", fairValue: "", currentPrice: "", liquidityScore: "", convictionScore: "", expectedNetProfit: "",
+      tierUsed: "1", fairValue: "", currentPrice: "", purchasePrice: "", liquidityScore: "", convictionScore: "", expectedNetProfit: "",
       whyMispriced: ["", "", ""], risks: ["", "", ""], exitStrategy: "",
       pmDecision: "", pmReason: "", pmDate: "", notes: "",
-      outcome: { didBuy: "", reviewDate: "", whatHappened: "", soldGross: "", soldNet: "" }
+      outcome: { didBuy: "", reviewDate: "", whatHappened: "", soldFor: "", worthToday: "" }
     };
   }
 
@@ -715,7 +715,7 @@
   // ---------- DETAIL SLIDEOVER ----------
   function openDetail(id) {
     detailMemo = JSON.parse(JSON.stringify(memos.find((m) => m.id === id)));
-    if (!detailMemo.outcome) detailMemo.outcome = { didBuy: "", reviewDate: "", whatHappened: "", soldGross: "", soldNet: "" };
+    if (!detailMemo.outcome) detailMemo.outcome = { didBuy: "", reviewDate: "", whatHappened: "", soldFor: "", worthToday: "" };
     renderDetail();
     el("detailBackdrop").classList.remove("hidden");
   }
@@ -755,14 +755,16 @@
         <p style="font-size:11.5px;color:var(--sub);margin:-4px 0 10px;">Use <strong>Approved (Not Purchased)</strong> when the opportunity was good but you didn't end up buying \u2014 e.g. it was outbid in the final minutes. Leave the Outcome Review below blank so you can check back later and see whether it would have been a good buy anyway.</p>
         ${fieldHTML("Reason", `<textarea id="d_reason">${m.pmReason || ""}</textarea>`)}
         ${fieldHTML("Decision Date", `<input type="date" id="d_date" value="${m.pmDate || ""}" />`)}
+        ${fieldHTML("Sold For \u2014 Gross ($)" + infoIcon("What the listing/auction actually closed at when you won it, before fees or shipping. Compare against the Current Price recorded during research to see how much the price moved between research and purchase (e.g. late bidding)."), `<input type="number" step="0.01" id="d_purchaseprice" value="${m.purchasePrice || ""}" />`)}
+        <div id="d_priceDrift" style="font-size:12px;color:var(--sub);margin:-2px 0 0;"></div>
       </div></div>
 
       <div class="section-card"><div class="section-head">OUTCOME REVIEW — 90 DAYS LATER</div><div class="section-body">
         ${fieldHTML("Did we buy?", `<select id="d_didbuy"><option value="">—</option><option ${m.outcome.didBuy === "Yes" ? "selected" : ""}>Yes</option><option ${m.outcome.didBuy === "No" ? "selected" : ""}>No</option></select>`)}
-        ${fieldHTML("Review Date", `<input type="date" id="d_reviewdate" value="${m.outcome.reviewDate || ""}" />`)}
+        ${fieldHTML("Date of this review", `<input type="date" id="d_reviewdate" value="${m.outcome.reviewDate || ""}" />`)}
         <div class="grid2">
-          ${fieldHTML("Sold For \u2014 Gross ($)" + infoIcon("What the card actually sold for, before deducting marketplace fees or shipping."), `<input type="number" step="0.01" id="d_soldgross" value="${m.outcome.soldGross || ""}" />`)}
-          ${fieldHTML("Sold For \u2014 Net ($)" + infoIcon("What you actually kept after marketplace fees and shipping were deducted \u2014 the real take-home."), `<input type="number" step="0.01" id="d_soldnet" value="${m.outcome.soldNet || ""}" />`)}
+          ${fieldHTML("Sold For \u2014 Gross ($)" + infoIcon("If it's been resold by the 90-day mark: what it actually sold for, before fees or shipping. Leave blank if still held."), `<input type="number" step="0.01" id="d_soldfor" value="${m.outcome.soldFor || ""}" />`)}
+          ${fieldHTML("Worth Today ($)" + infoIcon("If still held (or never bought): your best estimate of current market value as of the review date above \u2014 this is what tells you whether a pass or hold would have been a good call."), `<input type="number" step="0.01" id="d_worthtoday" value="${m.outcome.worthToday || ""}" />`)}
         </div>
         <div id="d_actualProfit" style="font-size:12px;color:var(--sub);margin:-2px 0 10px;"></div>
         ${fieldHTML("What happened?", `<textarea id="d_whathappened">${m.outcome.whatHappened || ""}</textarea>`)}
@@ -771,14 +773,34 @@
       <button class="btn-primary" id="saveDetailBtn">Save Changes</button>
     `;
 
+    function updatePriceDrift() {
+      const purchasePrice = parseFloat(el("d_purchaseprice").value);
+      const research = parseFloat(m.currentPrice);
+      const box = el("d_priceDrift");
+      if (isNaN(purchasePrice) || isNaN(research)) { box.textContent = ""; return; }
+      const drift = purchasePrice - research;
+      if (Math.abs(drift) < 0.01) {
+        box.textContent = "Matched the research price \u2014 no drift.";
+        box.style.color = "var(--sub)";
+      } else {
+        box.textContent = `${drift > 0 ? "+" : ""}$${drift.toFixed(2)} vs. research price of $${research.toFixed(2)} (${drift > 0 ? "cost more" : "cost less"} than expected at research time).`;
+        box.style.color = drift > 0 ? "#B91C1C" : "#15803D";
+      }
+    }
+    el("d_purchaseprice").addEventListener("input", updatePriceDrift);
+    updatePriceDrift();
+
     function updateActualProfit() {
-      const net = parseFloat(el("d_soldnet").value);
-      const cost = parseFloat(m.currentPrice);
+      const soldFor = parseFloat(el("d_soldfor").value);
+      const worthToday = parseFloat(el("d_worthtoday").value);
+      const exitValue = !isNaN(soldFor) ? soldFor : (!isNaN(worthToday) ? worthToday : null);
+      const cost = parseFloat(el("d_purchaseprice").value) || parseFloat(m.currentPrice);
       const box = el("d_actualProfit");
-      if (isNaN(net) || isNaN(cost)) { box.textContent = ""; return; }
-      const actual = net - cost;
+      if (exitValue === null || isNaN(cost)) { box.textContent = ""; return; }
+      const actual = exitValue - cost;
+      const label = !isNaN(soldFor) ? "Actual profit (sold)" : "Unrealized profit (marked to today's value)";
       const expected = parseFloat(m.expectedNetProfit);
-      let text = `Actual net profit: $${actual.toFixed(2)}`;
+      let text = `${label}: $${actual.toFixed(2)}`;
       if (!isNaN(expected)) {
         const diff = actual - expected;
         text += ` (expected $${expected.toFixed(2)}, ${diff >= 0 ? "beat it by $" + diff.toFixed(2) : "missed by $" + Math.abs(diff).toFixed(2)})`;
@@ -786,7 +808,8 @@
       box.textContent = text;
       box.style.color = actual >= 0 ? "#15803D" : "#B91C1C";
     }
-    el("d_soldnet").addEventListener("input", updateActualProfit);
+    el("d_soldfor").addEventListener("input", updateActualProfit);
+    el("d_worthtoday").addEventListener("input", updateActualProfit);
     updateActualProfit();
 
     el("saveDetailBtn").addEventListener("click", async () => {
@@ -795,9 +818,10 @@
       detailMemo.pmDecision = el("d_decision").value;
       detailMemo.pmReason = el("d_reason").value;
       detailMemo.pmDate = el("d_date").value;
+      detailMemo.purchasePrice = el("d_purchaseprice").value;
       detailMemo.outcome = {
         didBuy: el("d_didbuy").value, reviewDate: el("d_reviewdate").value, whatHappened: el("d_whathappened").value,
-        soldGross: el("d_soldgross").value, soldNet: el("d_soldnet").value
+        soldFor: el("d_soldfor").value, worthToday: el("d_worthtoday").value
       };
       const ok = await saveMemo(detailMemo);
       btn.disabled = false; btn.textContent = "Save Changes";
