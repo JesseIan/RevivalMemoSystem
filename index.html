@@ -154,6 +154,11 @@
     <div id="unassignedBanner" class="hidden" style="background:#FFFBEB;color:#92400E;border:1px solid #FDE68A;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;">
       Your account isn't assigned to a reviewer yet. Your memos are saved and visible to the admin, who'll assign you shortly.
     </div>
+    <div id="reviewReminderBanner" class="hidden" style="background:#FFFBEB;color:#92400E;border:1px solid #FDE68A;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;display:flex;align-items:center;gap:10px;">
+      <span>\u23f0</span>
+      <span id="reviewReminderText" style="flex:1;"></span>
+      <button class="btn-secondary" id="reviewReminderBtn" style="font-size:12px;padding:4px 10px;">Review now</button>
+    </div>
 
     <!-- NEW MEMO VIEW -->
     <div id="view-new" style="max-width: 640px;">
@@ -188,6 +193,7 @@
     <div id="view-dashboard" class="hidden">
       <h2 style="font-size:20px;margin-bottom:3px;">Dashboard</h2>
       <p style="color:var(--sub);font-size:13px;margin-bottom:20px;" id="dashSubtitle"></p>
+      <div id="dueReviewBox" class="hidden" style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:14px;margin-bottom:16px;"></div>
       <div class="goal-box">
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
           <span style="font-size:13px;font-weight:700;color:var(--sub);letter-spacing:0.03em;">YEAR 1 GOAL</span>
@@ -267,7 +273,7 @@
 <script>
   // ================= App logic (runs after Firebase is ready) =================
   const REC_COLORS = { BUY: "#15803D", WATCHLIST: "#B45309", PASS: "#B91C1C" };
-  const DEC_COLORS = { Approved: "#15803D", Rejected: "#B91C1C" };
+  const DEC_COLORS = { Approved: "#15803D", "Approved (Not Purchased)": "#B45309", Rejected: "#B91C1C" };
   const YEAR1_GOAL = 500;
 
   let memos = [];
@@ -471,6 +477,7 @@
         }));
       }
       memos = docs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      refreshGlobalReminderBanner();
     } catch (e) {
       showError("Could not load memos. Check your connection and try refreshing.");
     }
@@ -690,6 +697,13 @@
   el("searchInput").addEventListener("input", renderLog);
   el("filterRec").addEventListener("change", renderLog);
   el("refreshBtn").addEventListener("click", async () => { await loadMemos(); renderLog(); });
+  el("reviewReminderBtn").addEventListener("click", () => {
+    document.querySelectorAll(".nav-item").forEach((b) => b.classList.remove("active"));
+    document.querySelector('.nav-item[data-view="dashboard"]').classList.add("active");
+    ["new", "log", "dashboard", "team"].forEach((v) => el("view-" + v).classList.add("hidden"));
+    el("view-dashboard").classList.remove("hidden");
+    renderCurrentView("dashboard");
+  });
 
   // ---------- DETAIL SLIDEOVER ----------
   function openDetail(id) {
@@ -725,7 +739,13 @@
       </div></div>
 
       <div class="section-card"><div class="section-head">PORTFOLIO MANAGER DECISION</div><div class="section-body">
-        ${fieldHTML("Decision", `<select id="d_decision"><option value="">—</option><option ${m.pmDecision === "Approved" ? "selected" : ""}>Approved</option><option ${m.pmDecision === "Rejected" ? "selected" : ""}>Rejected</option></select>`)}
+        ${fieldHTML("Decision", `<select id="d_decision">
+          <option value="">—</option>
+          <option ${m.pmDecision === "Approved" ? "selected" : ""}>Approved</option>
+          <option ${m.pmDecision === "Approved (Not Purchased)" ? "selected" : ""}>Approved (Not Purchased)</option>
+          <option ${m.pmDecision === "Rejected" ? "selected" : ""}>Rejected</option>
+        </select>`)}
+        <p style="font-size:11.5px;color:var(--sub);margin:-4px 0 10px;">Use <strong>Approved (Not Purchased)</strong> when the opportunity was good but you didn't end up buying \u2014 e.g. it was outbid in the final minutes. Leave the Outcome Review below blank so you can check back later and see whether it would have been a good buy anyway.</p>
         ${fieldHTML("Reason", `<textarea id="d_reason">${m.pmReason || ""}</textarea>`)}
         ${fieldHTML("Decision Date", `<input type="date" id="d_date" value="${m.pmDate || ""}" />`)}
       </div></div>
@@ -754,20 +774,33 @@
   }
 
   // ---------- DASHBOARD ----------
+  const REVIEW_WINDOW_DAYS = 90;
+
+  function needsOutcomeReview(m) {
+    return m.recommendation === "BUY" || m.pmDecision === "Approved" || m.pmDecision === "Approved (Not Purchased)";
+  }
+  function daysSinceLogged(m) {
+    return (Date.now() - (m.createdAt || 0)) / 86400000;
+  }
+  function isDueForReview(m) {
+    return needsOutcomeReview(m) && !(m.outcome && m.outcome.didBuy) && daysSinceLogged(m) >= REVIEW_WINDOW_DAYS;
+  }
+
   function renderDashboard() {
     const total = memos.length;
     const withDecision = memos.filter((m) => m.pmDecision).length;
     const compliance = total ? Math.round((withDecision / total) * 100) : 0;
     const recCounts = { BUY: 0, WATCHLIST: 0, PASS: 0 };
     memos.forEach((m) => { if (recCounts[m.recommendation] !== undefined) recCounts[m.recommendation]++; });
-    const decCounts = { Approved: 0, Rejected: 0 };
-    memos.forEach((m) => { if (m.pmDecision === "Approved") decCounts.Approved++; if (m.pmDecision === "Rejected") decCounts.Rejected++; });
+    const decCounts = { Approved: 0, "Approved (Not Purchased)": 0, Rejected: 0 };
+    memos.forEach((m) => { if (decCounts[m.pmDecision] !== undefined) decCounts[m.pmDecision]++; });
     const convictions = memos.map((m) => parseFloat(m.convictionScore)).filter((n) => !isNaN(n));
     const avgConviction = convictions.length ? (convictions.reduce((a, b) => a + b, 0) / convictions.length) : null;
     const liquidities = memos.map((m) => parseFloat(m.liquidityScore)).filter((n) => !isNaN(n));
     const avgLiquidity = liquidities.length ? (liquidities.reduce((a, b) => a + b, 0) / liquidities.length) : null;
-    const outcomesDue = memos.filter((m) => m.recommendation === "BUY" || m.pmDecision === "Approved").length;
+    const outcomesDue = memos.filter(needsOutcomeReview).length;
     const outcomesDone = memos.filter((m) => m.outcome && m.outcome.didBuy).length;
+    const dueList = memos.filter(isDueForReview).sort((a, b) => daysSinceLogged(b) - daysSinceLogged(a));
 
     el("dashSubtitle").textContent = total + " memos logged";
     el("goalCount").textContent = total + " / " + YEAR1_GOAL + " memos";
@@ -775,6 +808,8 @@
     const compLabel = el("complianceLabel");
     compLabel.textContent = compliance + "% compliance";
     compLabel.style.color = compliance >= 95 ? "#15803D" : compliance >= 80 ? "#B45309" : "#B91C1C";
+
+    renderDueForReviewBox(dueList);
 
     el("statsGrid").innerHTML = [
       ["Avg. Conviction", avgConviction !== null ? avgConviction.toFixed(1) : "—"],
@@ -796,6 +831,7 @@
     if (decChart) decChart.destroy();
     const decLabels = [], decData = [], decColors = [];
     if (decCounts.Approved > 0) { decLabels.push("Approved"); decData.push(decCounts.Approved); decColors.push("#15803D"); }
+    if (decCounts["Approved (Not Purchased)"] > 0) { decLabels.push("Approved, Not Purchased"); decData.push(decCounts["Approved (Not Purchased)"]); decColors.push("#B45309"); }
     if (decCounts.Rejected > 0) { decLabels.push("Rejected"); decData.push(decCounts.Rejected); decColors.push("#B91C1C"); }
     if (decData.length === 0) { decLabels.push("No decisions yet"); decData.push(1); decColors.push("#E5E7EB"); }
     decChart = new Chart(el("decChart"), {
@@ -803,6 +839,44 @@
       data: { labels: decLabels, datasets: [{ data: decData, backgroundColor: decColors }] },
       options: { plugins: { legend: { position: "bottom" } } }
     });
+  }
+
+  function renderDueForReviewBox(dueList) {
+    const box = el("dueReviewBox");
+    if (!box) return;
+    if (dueList.length === 0) {
+      box.classList.add("hidden");
+      return;
+    }
+    box.classList.remove("hidden");
+    box.innerHTML = `
+      <div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+        \u23f0 ${dueList.length} memo${dueList.length > 1 ? "s" : ""} due for a 90-day outcome review
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${dueList.map((m) => `
+          <div class="due-review-row" data-id="${m.id}" style="display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #FDE68A;border-radius:7px;padding:7px 10px;cursor:pointer;font-size:13px;">
+            <span style="font-weight:600;">${m.card || "Untitled"}${m.player ? " — " + m.player : ""}</span>
+            <span style="color:#92400E;">${Math.floor(daysSinceLogged(m))} days ago \u00b7 ${badge(m.pmDecision || m.recommendation, DEC_COLORS)}</span>
+          </div>
+        `).join("")}
+      </div>
+    `;
+    box.querySelectorAll(".due-review-row").forEach((row) => {
+      row.addEventListener("click", () => openDetail(row.dataset.id));
+    });
+  }
+
+  function refreshGlobalReminderBanner() {
+    const banner = el("reviewReminderBanner");
+    if (!banner) return;
+    const dueCount = memos.filter(isDueForReview).length;
+    if (dueCount === 0) {
+      banner.classList.add("hidden");
+      return;
+    }
+    banner.classList.remove("hidden");
+    el("reviewReminderText").textContent = `${dueCount} memo${dueCount > 1 ? "s" : ""} ${dueCount > 1 ? "are" : "is"} due for a 90-day outcome review.`;
   }
 
   // ---------- TEAM (admin only) ----------
