@@ -355,6 +355,8 @@
       reviewerUid: currentProfile ? currentProfile.reviewerUid : null,
       recommendation: "", card: "", player: "", year: "", set: "", cardNumber: "", grade: "", population: "", serial: "",
       platform: "", endDateTime: "", listingUrl: "",
+      crackRegrade: false, crackRegradeTargetCompany: "", crackRegradeTargetGrade: "",
+      crackRegradeUpside: "", crackRegradeDownside: "", crackRegradeNotes: "",
       tierUsed: "1", compSource: "", compSourceNotes: "", fairValue: "", currentPrice: "", purchasePrice: "", liquidityScore: "", convictionScore: "", expectedNetProfit: "",
       whyMispriced: ["", "", ""], risks: ["", "", ""], exitStrategy: "",
       pmDecision: "", pmReason: "", pmDate: "", notes: "",
@@ -407,6 +409,11 @@
     });
   }
   setInterval(refreshLiveCountdowns, 30000);
+
+  function memoTitle(m) {
+    const cardPart = (m.card || "Untitled") + (m.cardNumber ? " #" + m.cardNumber : "");
+    return cardPart + (m.player ? " — " + m.player : "");
+  }
 
   function badge(text, colorMap) {
     if (!text) return '<span style="color:#9CA3AF;font-size:13px;">—</span>';
@@ -608,6 +615,30 @@
         ${fieldHTML("Serial #", `<input id="f_serial" placeholder="e.g. 5/99" />`)}
       </div></div>
 
+      <div class="section-card"><div class="section-head">CRACK &amp; REGRADE (OPTIONAL)</div><div class="section-body">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin-bottom:2px;cursor:pointer;">
+          <input type="checkbox" id="f_crackregrade" style="width:auto;" />
+          This card is a crack &amp; regrade candidate
+        </label>
+        <p style="font-size:11.5px;color:var(--sub);margin:4px 0 10px;">e.g. it's currently an SGC 8.5, but cracked out and resubmitted to PSA it could come back an 8 or 9 \u2014 worth flagging as optionality even if it's a gamble.</p>
+        <div id="crackRegradeFields" class="hidden grid2">
+          ${fieldHTML("Target Grading Company", `<select id="f_crtargetcompany">
+            <option value="">\u2014</option>
+            <option>PSA</option>
+            <option>BGS</option>
+            <option>SGC</option>
+            <option>CGC</option>
+            <option>Other</option>
+          </select>`)}
+          ${fieldHTML("Target Grade Estimate", `<input id="f_crtargetgrade" placeholder="e.g. 8 or 9" />`)}
+          ${fieldHTML("Upside Value if Successful ($)" + infoIcon("Estimated Fair Value if the regrade comes back at or above the target grade."), `<input type="number" step="0.01" id="f_crupside" />`)}
+          ${fieldHTML("Downside Value if Unsuccessful ($)" + infoIcon("Estimated value if the regrade comes back the same or lower \u2014 the worst-case outcome you're risking against the upside."), `<input type="number" step="0.01" id="f_crdownside" />`)}
+          <div style="grid-column: 1 / -1;">
+            ${fieldHTML("Notes", `<input id="f_crnotes" placeholder="e.g. Corners look sharp under the SGC holder, likely undergraded" />`)}
+          </div>
+        </div>
+      </div></div>
+
       <div class="section-card"><div class="section-head">LISTING</div><div class="section-body grid2">
         ${fieldHTML("Platform", `<select id="f_platform">
           <option value="">\u2014</option>
@@ -688,6 +719,10 @@
     el("f_fairvalue").addEventListener("input", updateDiscount);
     el("f_currentprice").addEventListener("input", updateDiscount);
 
+    el("f_crackregrade").addEventListener("change", () => {
+      el("crackRegradeFields").classList.toggle("hidden", !el("f_crackregrade").checked);
+    });
+
     form.onsubmit = async (e) => {
       e.preventDefault();
       clearError();
@@ -701,6 +736,9 @@
         cardNumber: el("f_cardnumber").value,
         grade: el("f_grade").value, population: el("f_population").value, serial: el("f_serial").value,
         platform: el("f_platform").value, endDateTime: el("f_endtime").value, listingUrl: el("f_listingurl").value.trim(),
+        crackRegrade: el("f_crackregrade").checked,
+        crackRegradeTargetCompany: el("f_crtargetcompany").value, crackRegradeTargetGrade: el("f_crtargetgrade").value,
+        crackRegradeUpside: el("f_crupside").value, crackRegradeDownside: el("f_crdownside").value, crackRegradeNotes: el("f_crnotes").value,
         tierUsed: el("f_tier").value, compSource: el("f_compsource").value, compSourceNotes: el("f_compsourcenotes").value,
         fairValue: el("f_fairvalue").value, currentPrice: el("f_currentprice").value,
         liquidityScore: el("f_liquidity").value, convictionScore: el("f_conviction").value,
@@ -750,14 +788,14 @@
         <thead><tr><th>Date</th><th>Card / Player</th><th>Ends</th><th>Researcher</th><th>Rec</th><th>Decision</th><th>Outcome</th><th></th></tr></thead>
         <tbody>
           ${list.map((m) => {
-            const nameText = (m.card || "—") + (m.player ? " — " + m.player : "");
+            const nameText = memoTitle(m);
             const nameCell = m.listingUrl
               ? `<a href="${m.listingUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="color:var(--ink);text-decoration:underline;">${nameText}</a>`
               : nameText;
             return `
             <tr class="memo-row" data-id="${m.id}">
               <td>${m.date || "—"}</td>
-              <td style="font-weight:600;">${nameCell}</td>
+              <td style="font-weight:600;">${nameCell}${m.crackRegrade ? ` <span title="Crack &amp; Regrade candidate" style="font-size:11px;">\ud83c\udfb2</span>` : ""}</td>
               <td style="font-size:12px;">${countdownHTML(m.endDateTime)}</td>
               <td>${m.researcher || "—"}</td>
               <td>${badge(m.recommendation, getRecColors())}</td>
@@ -804,7 +842,7 @@
     const m = detailMemo;
     el("detailBody").innerHTML = `
       <div style="font-size:11px;color:#9CA3AF;font-weight:700;margin-bottom:4px;">${m.id}</div>
-      <h3 style="font-size:20px;margin-bottom:16px;">${m.card || "Untitled"}${m.player ? " — " + m.player : ""}</h3>
+      <h3 style="font-size:20px;margin-bottom:16px;">${memoTitle(m)}</h3>
 
       <div class="section-card">
         <div class="section-head" style="display:flex;justify-content:space-between;align-items:center;">
@@ -848,6 +886,16 @@
         <div><label class="field-label">Conviction</label>${m.convictionScore || "—"}</div>
         <div style="grid-column: 1 / -1;"><label class="field-label">Comp Source</label>${m.compSource || "—"}${m.compSourceNotes ? ` \u2014 ${m.compSourceNotes}` : ""}</div>
       </div></div>
+
+      ${m.crackRegrade ? `
+      <div class="section-card"><div class="section-head">\ud83c\udfb2 CRACK &amp; REGRADE CANDIDATE</div><div class="section-body grid2" style="font-size:13px;">
+        <div><label class="field-label">Current Grade</label>${m.grade || "—"}</div>
+        <div><label class="field-label">Target</label>${m.crackRegradeTargetCompany || "—"} ${m.crackRegradeTargetGrade || ""}</div>
+        <div><label class="field-label">Upside if Successful</label>$${m.crackRegradeUpside || "—"}</div>
+        <div><label class="field-label">Downside if Unsuccessful</label>$${m.crackRegradeDownside || "—"}</div>
+        ${m.crackRegradeNotes ? `<div style="grid-column: 1 / -1;"><label class="field-label">Notes</label>${m.crackRegradeNotes}</div>` : ""}
+      </div></div>
+      ` : ""}
 
       <div class="section-card"><div class="section-head">PORTFOLIO MANAGER DECISION</div><div class="section-body">
         ${fieldHTML("Decision", `<select id="d_decision">
@@ -1031,7 +1079,7 @@
       <div style="display:flex;flex-direction:column;gap:6px;">
         ${dueList.map((m) => `
           <div class="due-review-row" data-id="${m.id}" style="display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #FDE68A;border-radius:7px;padding:7px 10px;cursor:pointer;font-size:13px;">
-            <span style="font-weight:600;">${m.card || "Untitled"}${m.player ? " — " + m.player : ""}</span>
+            <span style="font-weight:600;">${memoTitle(m)}</span>
             <span style="color:#92400E;">${Math.floor(daysSinceLogged(m))} days ago \u00b7 ${badge(m.pmDecision || m.recommendation, getDecColors())}</span>
           </div>
         `).join("")}
