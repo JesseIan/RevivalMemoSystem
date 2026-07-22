@@ -319,6 +319,7 @@
   let currentUser = null;
   let isSignUpMode = false;
   let detailMemo = null;
+  let editingListing = false;
   let recChart = null, decChart = null;
 
   function el(id) { return document.getElementById(id); }
@@ -354,7 +355,7 @@
       reviewerUid: currentProfile ? currentProfile.reviewerUid : null,
       recommendation: "", card: "", player: "", year: "", set: "", cardNumber: "", grade: "", population: "", serial: "",
       platform: "", endDateTime: "", listingUrl: "",
-      tierUsed: "1", fairValue: "", currentPrice: "", purchasePrice: "", liquidityScore: "", convictionScore: "", expectedNetProfit: "",
+      tierUsed: "1", compSource: "", compSourceNotes: "", fairValue: "", currentPrice: "", purchasePrice: "", liquidityScore: "", convictionScore: "", expectedNetProfit: "",
       whyMispriced: ["", "", ""], risks: ["", "", ""], exitStrategy: "",
       pmDecision: "", pmReason: "", pmDate: "", notes: "",
       outcome: { didBuy: "", reviewDate: "", whatHappened: "", soldFor: "", worthToday: "" }
@@ -631,6 +632,22 @@
 
       <div class="section-card"><div class="section-head">PRICING</div><div class="section-body grid2">
         ${fieldHTML("Tier Used" + infoIcon("Which comp standard was used. 1 = Primary (median of last 5 sales, same grade, past 90 days). 2 = Fallback (median of last 3 sales, past 180 days) \u2014 use only if Tier 1 has fewer than 5 qualifying sales. 3 = Illiquid (no reliable comp set) \u2014 never auto-approved, requires full IC judgment."), `<select id="f_tier"><option value="1">1 — Primary</option><option value="2">2 — Fallback</option><option value="3">3 — Illiquid</option></select>`)}
+        ${fieldHTML("Comp Source" + infoIcon("Where the comps for this Fair Value calculation actually came from. This is the source of truth a reviewer or future researcher would check to verify the number \u2014 be specific in the notes field (e.g. which sales, which dates)."), `<select id="f_compsource">
+          <option value="">\u2014</option>
+          <option>eBay Sold Listings</option>
+          <option>130point</option>
+          <option>Card Ladder</option>
+          <option>PWCC Marketplace</option>
+          <option>Goldin</option>
+          <option>Fanatics Collect</option>
+          <option>Heritage Auctions</option>
+          <option>PSA/BGS Population Report</option>
+          <option>Sportscard Investor</option>
+          <option>Other</option>
+        </select>`)}
+        <div style="grid-column: 1 / -1;">
+          ${fieldHTML("Comp Source Notes", `<input id="f_compsourcenotes" placeholder="e.g. 3 PSA 10 sales on eBay, June\u2013July 2026, excluding the outlier $1,250 sale" />`)}
+        </div>
         ${fieldHTML("Fair Value ($)" + infoIcon("What the Tier Used standard says this card is actually worth right now, based on real comps \u2014 not the asking price."), `<input type="number" step="0.01" id="f_fairvalue" />`)}
         ${fieldHTML("Current Price ($)" + infoIcon("The listing's current asking price, or current bid plus an assumed close estimate if it's an active auction."), `<input type="number" step="0.01" id="f_currentprice" />`)}
         ${fieldHTML("Discount" + infoIcon("How far below Fair Value the Current Price sits. \u226480% = BUY. 81\u201390% = WATCHLIST. Above 90% = IGNORE, unless a Special Situation applies."), `<div id="f_discount" style="padding:8px 10px;background:#F3F4F6;border-radius:6px;">—</div>`)}
@@ -684,7 +701,8 @@
         cardNumber: el("f_cardnumber").value,
         grade: el("f_grade").value, population: el("f_population").value, serial: el("f_serial").value,
         platform: el("f_platform").value, endDateTime: el("f_endtime").value, listingUrl: el("f_listingurl").value.trim(),
-        tierUsed: el("f_tier").value, fairValue: el("f_fairvalue").value, currentPrice: el("f_currentprice").value,
+        tierUsed: el("f_tier").value, compSource: el("f_compsource").value, compSourceNotes: el("f_compsourcenotes").value,
+        fairValue: el("f_fairvalue").value, currentPrice: el("f_currentprice").value,
         liquidityScore: el("f_liquidity").value, convictionScore: el("f_conviction").value,
         expectedNetProfit: el("f_expectedprofit").value,
         whyMispriced: [el("f_mispriced0").value, el("f_mispriced1").value, el("f_mispriced2").value],
@@ -772,12 +790,14 @@
   function openDetail(id) {
     detailMemo = JSON.parse(JSON.stringify(memos.find((m) => m.id === id)));
     if (!detailMemo.outcome) detailMemo.outcome = { didBuy: "", reviewDate: "", whatHappened: "", soldFor: "", worthToday: "" };
+    editingListing = false;
     renderDetail();
     el("detailBackdrop").classList.remove("hidden");
   }
   el("closeDetailBtn").addEventListener("click", () => {
     el("detailBackdrop").classList.add("hidden");
     detailMemo = null;
+    editingListing = false;
   });
 
   function renderDetail() {
@@ -786,11 +806,38 @@
       <div style="font-size:11px;color:#9CA3AF;font-weight:700;margin-bottom:4px;">${m.id}</div>
       <h3 style="font-size:20px;margin-bottom:16px;">${m.card || "Untitled"}${m.player ? " — " + m.player : ""}</h3>
 
-      <div class="section-card"><div class="section-head">LISTING</div><div class="section-body grid2" style="font-size:13px;">
-        <div><label class="field-label">Platform</label>${m.platform || "—"}</div>
-        <div><label class="field-label">Auction Ends</label>${m.endDateTime ? new Date(m.endDateTime).toLocaleString() : "—"}${m.endDateTime ? ` \u00b7 ${countdownHTML(m.endDateTime)}` : ""}</div>
-        <div style="grid-column: 1 / -1;"><label class="field-label">Listing</label>${m.listingUrl ? `<a href="${m.listingUrl}" target="_blank" rel="noopener noreferrer" style="color:#1F2937;text-decoration:underline;">Open listing \u2197</a>` : "—"}</div>
-      </div></div>
+      <div class="section-card">
+        <div class="section-head" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>LISTING</span>
+          <button type="button" id="listingEditToggle" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:11px;font-weight:700;letter-spacing:0.04em;padding:0;">${editingListing ? "DONE" : "EDIT"}</button>
+        </div>
+        <div class="section-body ${editingListing ? "" : "grid2"}" style="font-size:13px;">
+          ${editingListing ? `
+            <p style="font-size:11.5px;color:var(--sub);margin:0 0 10px;">Correcting a clerical error \u2014 e.g. an auction end time that's off \u2014 is exactly what this is for.</p>
+            ${fieldHTML("Platform", `<select id="d_platform">
+              <option value="">\u2014</option>
+              <option ${m.platform === "eBay" ? "selected" : ""}>eBay</option>
+              <option ${m.platform === "Facebook Marketplace" ? "selected" : ""}>Facebook Marketplace</option>
+              <option ${m.platform === "OfferUp" ? "selected" : ""}>OfferUp</option>
+              <option ${m.platform === "Craigslist" ? "selected" : ""}>Craigslist</option>
+              <option ${m.platform === "Local Card Shop" ? "selected" : ""}>Local Card Shop</option>
+              <option ${m.platform === "Card Show" ? "selected" : ""}>Card Show</option>
+              <option ${m.platform === "Estate Sale" ? "selected" : ""}>Estate Sale</option>
+              <option ${m.platform === "Goldin" ? "selected" : ""}>Goldin</option>
+              <option ${m.platform === "Fanatics Collect" ? "selected" : ""}>Fanatics Collect</option>
+              <option ${m.platform === "PWCC" ? "selected" : ""}>PWCC</option>
+              <option ${m.platform === "Heritage" ? "selected" : ""}>Heritage</option>
+              <option ${m.platform === "Other" ? "selected" : ""}>Other</option>
+            </select>`)}
+            ${fieldHTML("Auction End (date &amp; time)", `<input type="datetime-local" id="d_endtime" value="${m.endDateTime || ""}" />`)}
+            ${fieldHTML("Listing URL", `<input type="url" id="d_listingurl" value="${m.listingUrl || ""}" placeholder="https://\u2026" />`)}
+          ` : `
+            <div><label class="field-label">Platform</label>${m.platform || "—"}</div>
+            <div><label class="field-label">Auction Ends</label>${m.endDateTime ? new Date(m.endDateTime).toLocaleString() : "—"}${m.endDateTime ? ` \u00b7 ${countdownHTML(m.endDateTime)}` : ""}</div>
+            <div style="grid-column: 1 / -1;"><label class="field-label">Listing</label>${m.listingUrl ? `<a href="${m.listingUrl}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:underline;">Open listing \u2197</a>` : "—"}</div>
+          `}
+        </div>
+      </div>
 
       <div class="section-card"><div class="section-head">RECOMMENDATION &amp; PRICING</div><div class="section-body grid2" style="font-size:13px;">
         <div><label class="field-label">Recommendation</label>${badge(m.recommendation, getRecColors())}</div>
@@ -799,6 +846,7 @@
         <div><label class="field-label">Current Price</label>$${m.currentPrice || "—"}</div>
         <div><label class="field-label">Liquidity</label>${m.liquidityScore || "—"}</div>
         <div><label class="field-label">Conviction</label>${m.convictionScore || "—"}</div>
+        <div style="grid-column: 1 / -1;"><label class="field-label">Comp Source</label>${m.compSource || "—"}${m.compSourceNotes ? ` \u2014 ${m.compSourceNotes}` : ""}</div>
       </div></div>
 
       <div class="section-card"><div class="section-head">PORTFOLIO MANAGER DECISION</div><div class="section-body">
@@ -828,6 +876,16 @@
 
       <button class="btn-primary" id="saveDetailBtn">Save Changes</button>
     `;
+
+    el("listingEditToggle").addEventListener("click", () => {
+      if (editingListing) {
+        detailMemo.platform = el("d_platform").value;
+        detailMemo.endDateTime = el("d_endtime").value;
+        detailMemo.listingUrl = el("d_listingurl").value.trim();
+      }
+      editingListing = !editingListing;
+      renderDetail();
+    });
 
     function updatePriceDrift() {
       const purchasePrice = parseFloat(el("d_purchaseprice").value);
