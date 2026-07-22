@@ -929,6 +929,11 @@
     el("saveDetailBtn").addEventListener("click", async () => {
       const btn = el("saveDetailBtn");
       btn.disabled = true; btn.textContent = "Saving…";
+      if (editingListing) {
+        detailMemo.platform = el("d_platform").value;
+        detailMemo.endDateTime = el("d_endtime").value;
+        detailMemo.listingUrl = el("d_listingurl").value.trim();
+      }
       detailMemo.pmDecision = el("d_decision").value;
       detailMemo.pmReason = el("d_reason").value;
       detailMemo.pmDate = el("d_date").value;
