@@ -311,8 +311,17 @@
   function dangerColor() { return isDarkTheme() ? "#F87171" : "#B91C1C"; }
   function warnColor() { return isDarkTheme() ? "#FBBF24" : "#B45309"; }
   function neutralColor() { return isDarkTheme() ? "#D1D5DB" : "#374151"; }
+  function progressColor() { return isDarkTheme() ? "#60A5FA" : "#2563EB"; }
   function getRecColors() { return { BUY: successColor(), WATCHLIST: warnColor(), PASS: dangerColor() }; }
-  function getDecColors() { return { Approved: successColor(), "Approved (Not Purchased)": warnColor(), Rejected: dangerColor() }; }
+  function getDecColors() {
+    return {
+      Approved: progressColor(),
+      "Bid/Offer Placed": warnColor(),
+      Purchased: successColor(),
+      "Missed Out": dangerColor(),
+      Rejected: isDarkTheme() ? "#9CA3AF" : "#6B7280",
+    };
+  }
   const YEAR1_GOAL = 500;
 
   let memos = [];
@@ -416,18 +425,20 @@
   }
 
   function purchaseStatusHTML(m) {
-    if (m.pmDecision === "Approved") {
+    if (m.pmDecision === "Purchased") {
       const pp = parseFloat(m.purchasePrice);
-      if (isNaN(pp)) return `<span style="font-weight:600;">Bought</span>`;
+      if (isNaN(pp)) return `<span style="font-weight:600;color:${successColor()};">Purchased</span>`;
       const research = parseFloat(m.currentPrice);
       let deltaHTML = "";
       if (!isNaN(research) && Math.abs(pp - research) >= 0.01) {
         const diff = pp - research;
         deltaHTML = ` <span style="font-size:11px;color:${diff > 0 ? dangerColor() : successColor()};">(${diff > 0 ? "+" : ""}$${diff.toFixed(2)} vs. research price)</span>`;
       }
-      return `<span style="font-weight:600;">Bought $${pp.toFixed(2)}</span>${deltaHTML}`;
+      return `<span style="font-weight:600;color:${successColor()};">Purchased $${pp.toFixed(2)}</span>${deltaHTML}`;
     }
-    if (m.pmDecision === "Approved (Not Purchased)") return `<span style="color:${warnColor()};font-weight:600;">Not purchased</span> <span style="font-size:11px;color:var(--sub);">(outbid/missed)</span>`;
+    if (m.pmDecision === "Missed Out") return `<span style="color:${dangerColor()};font-weight:600;">Missed out</span> <span style="font-size:11px;color:var(--sub);">(outbid/offer declined)</span>`;
+    if (m.pmDecision === "Bid/Offer Placed") return `<span style="color:${warnColor()};font-weight:600;">Bid/offer placed</span> <span style="font-size:11px;color:var(--sub);">(awaiting result)</span>`;
+    if (m.pmDecision === "Approved") return `<span style="color:${progressColor()};font-weight:600;">Approved</span> <span style="font-size:11px;color:var(--sub);">(not yet bid)</span>`;
     if (m.pmDecision === "Rejected") return `<span style="color:var(--sub);">Passed</span>`;
     return `<span style="color:var(--sub);">Awaiting decision</span>`;
   }
@@ -927,11 +938,13 @@
       <div class="section-card"><div class="section-head">PORTFOLIO MANAGER DECISION</div><div class="section-body">
         ${fieldHTML("Decision", `<select id="d_decision">
           <option value="">—</option>
-          <option ${m.pmDecision === "Approved" ? "selected" : ""}>Approved</option>
-          <option ${m.pmDecision === "Approved (Not Purchased)" ? "selected" : ""}>Approved (Not Purchased)</option>
           <option ${m.pmDecision === "Rejected" ? "selected" : ""}>Rejected</option>
+          <option ${m.pmDecision === "Approved" ? "selected" : ""}>Approved</option>
+          <option ${m.pmDecision === "Bid/Offer Placed" ? "selected" : ""}>Bid/Offer Placed</option>
+          <option ${m.pmDecision === "Purchased" ? "selected" : ""}>Purchased</option>
+          <option ${m.pmDecision === "Missed Out" ? "selected" : ""}>Missed Out</option>
         </select>`)}
-        <p style="font-size:11.5px;color:var(--sub);margin:-4px 0 10px;">Use <strong>Approved (Not Purchased)</strong> when the opportunity was good but you didn't end up buying \u2014 e.g. it was outbid in the final minutes. Leave the Outcome Review below blank so you can check back later and see whether it would have been a good buy anyway.</p>
+        <p style="font-size:11.5px;color:var(--sub);margin:-4px 0 10px;">Pipeline: <strong>Approved</strong> (cleared to pursue) \u2192 <strong>Bid/Offer Placed</strong> (auction bid or best offer submitted, awaiting result) \u2192 <strong>Purchased</strong> or <strong>Missed Out</strong>. Use <strong>Missed Out</strong> when the opportunity was good but you didn't end up buying \u2014 e.g. outbid in the final minutes \u2014 and leave the Outcome Review below blank so you can check back later and see whether it would have been a good buy anyway.</p>
         ${fieldHTML("Reason", `<textarea id="d_reason">${m.pmReason || ""}</textarea>`)}
         ${fieldHTML("Decision Date", `<input type="date" id="d_date" value="${m.pmDate || ""}" />`)}
         ${fieldHTML("Sold For \u2014 Gross ($)" + infoIcon("What the listing/auction actually closed at when you won it, before fees or shipping. Compare against the Current Price recorded during research to see how much the price moved between research and purchase (e.g. late bidding)."), `<input type="number" step="0.01" id="d_purchaseprice" value="${m.purchasePrice || ""}" />`)}
@@ -1027,7 +1040,7 @@
   const REVIEW_WINDOW_DAYS = 90;
 
   function needsOutcomeReview(m) {
-    return m.recommendation === "BUY" || m.pmDecision === "Approved" || m.pmDecision === "Approved (Not Purchased)";
+    return m.pmDecision === "Purchased" || m.pmDecision === "Missed Out";
   }
   function daysSinceLogged(m) {
     return (Date.now() - (m.createdAt || 0)) / 86400000;
@@ -1042,7 +1055,7 @@
     const compliance = total ? Math.round((withDecision / total) * 100) : 0;
     const recCounts = { BUY: 0, WATCHLIST: 0, PASS: 0 };
     memos.forEach((m) => { if (recCounts[m.recommendation] !== undefined) recCounts[m.recommendation]++; });
-    const decCounts = { Approved: 0, "Approved (Not Purchased)": 0, Rejected: 0 };
+    const decCounts = { Rejected: 0, Approved: 0, "Bid/Offer Placed": 0, Purchased: 0, "Missed Out": 0 };
     memos.forEach((m) => { if (decCounts[m.pmDecision] !== undefined) decCounts[m.pmDecision]++; });
     const convictions = memos.map((m) => parseFloat(m.convictionScore)).filter((n) => !isNaN(n));
     const avgConviction = convictions.length ? (convictions.reduce((a, b) => a + b, 0) / convictions.length) : null;
@@ -1080,9 +1093,11 @@
 
     if (decChart) decChart.destroy();
     const decLabels = [], decData = [], decColors = [];
-    if (decCounts.Approved > 0) { decLabels.push("Approved"); decData.push(decCounts.Approved); decColors.push(successColor()); }
-    if (decCounts["Approved (Not Purchased)"] > 0) { decLabels.push("Approved, Not Purchased"); decData.push(decCounts["Approved (Not Purchased)"]); decColors.push(warnColor()); }
-    if (decCounts.Rejected > 0) { decLabels.push("Rejected"); decData.push(decCounts.Rejected); decColors.push(dangerColor()); }
+    if (decCounts.Rejected > 0) { decLabels.push("Rejected"); decData.push(decCounts.Rejected); decColors.push(getDecColors().Rejected); }
+    if (decCounts.Approved > 0) { decLabels.push("Approved"); decData.push(decCounts.Approved); decColors.push(progressColor()); }
+    if (decCounts["Bid/Offer Placed"] > 0) { decLabels.push("Bid/Offer Placed"); decData.push(decCounts["Bid/Offer Placed"]); decColors.push(warnColor()); }
+    if (decCounts.Purchased > 0) { decLabels.push("Purchased"); decData.push(decCounts.Purchased); decColors.push(successColor()); }
+    if (decCounts["Missed Out"] > 0) { decLabels.push("Missed Out"); decData.push(decCounts["Missed Out"]); decColors.push(dangerColor()); }
     if (decData.length === 0) { decLabels.push("No decisions yet"); decData.push(1); decColors.push("#E5E7EB"); }
     decChart = new Chart(el("decChart"), {
       type: "doughnut",
