@@ -4,62 +4,76 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>IC Memo System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --ink: #111827; --sub: #6B7280; --line: #E5E7EB; --panel: #F9FAFB;
+    --ink: #14171F; --sub: #6B7280; --line: #E7E8EC; --panel: #F7F7F9;
     --dark: #1F2937; --buy: #15803D; --watch: #B45309; --pass: #B91C1C;
+    --accent: #3730A3; --shadow: 0 1px 2px rgba(17,24,39,0.04), 0 1px 8px rgba(17,24,39,0.04);
   }
   * { box-sizing: border-box; }
   html { font-size: 15px; }
-  body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #F3F4F6; color: var(--ink); font-size: 14px; }
-  h1, h2, h3 { font-family: Georgia, serif; margin: 0; }
+  body { margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--panel); color: var(--ink); font-size: 14px; }
+  h1, h2, h3 { font-family: 'Fraunces', Georgia, serif; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
   input, select, textarea, button { font-family: inherit; font-size: 13px; }
   input, select, textarea {
-    width: 100%; padding: 7px 9px; border-radius: 6px; border: 1px solid #D1D5DB; background: #fff;
+    width: 100%; padding: 7px 9px; border-radius: 7px; border: 1px solid #D9DBE1; background: #fff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(55,48,163,0.10);
   }
   textarea { resize: vertical; min-height: 50px; }
   label.field-label { display: block; font-size: 11.5px; font-weight: 600; color: var(--sub); margin-bottom: 3px; letter-spacing: 0.02em; }
   .field { margin-bottom: 10px; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .section-card { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 12px; overflow: hidden; background: #fff; }
-  .section-head { background: var(--dark); color: #fff; padding: 6px 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
-  .section-body { padding: 13px; }
+  .section-card { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; overflow: hidden; background: #fff; box-shadow: var(--shadow); }
+  .section-head { background: var(--dark); color: #fff; padding: 7px 13px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; }
+  .section-body { padding: 14px; }
   .btn-primary {
     width: 100%; padding: 10px 0; border-radius: 8px; border: none; background: var(--dark);
-    color: #fff; font-weight: 700; cursor: pointer; font-size: 13px;
+    color: #fff; font-weight: 600; cursor: pointer; font-size: 13px; transition: background 0.15s ease, transform 0.1s ease;
   }
+  .btn-primary:hover:not(:disabled) { background: #111827; }
+  .btn-primary:active:not(:disabled) { transform: scale(0.99); }
   .btn-primary:disabled { background: #9CA3AF; cursor: default; }
   .btn-secondary {
-    border: 1px solid #D1D5DB; background: #fff; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px;
+    border: 1px solid #D9DBE1; background: #fff; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-size: 13px;
+    transition: background 0.15s ease, border-color 0.15s ease;
   }
+  .btn-secondary:hover { background: #F9FAFB; border-color: #C7CAD1; }
   .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid; }
   .hidden { display: none !important; }
   html, body { height: 100%; }
   .app-shell { display: flex; height: 100vh; overflow: hidden; }
-  .sidebar { width: 200px; height: 100%; flex-shrink: 0; background: #fff; border-right: 1px solid var(--line); padding: 16px 14px; display: flex; flex-direction: column; overflow-y: auto; }
+  .sidebar { width: 208px; height: 100%; flex-shrink: 0; background: #fff; border-right: 1px solid var(--line); padding: 18px 14px; display: flex; flex-direction: column; overflow-y: auto; }
   .nav-item {
-    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 12px;
-    border-radius: 8px; border: none; cursor: pointer; background: transparent; color: #374151;
-    font-size: 13px; font-weight: 600; margin-bottom: 3px;
+    display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; padding: 8px 12px;
+    border-radius: 8px; border: none; cursor: pointer; background: transparent; color: #4B5563;
+    font-size: 13px; font-weight: 600; margin-bottom: 2px; transition: background 0.15s ease, color 0.15s ease;
   }
+  .nav-item:hover:not(.active) { background: #F3F4F6; color: var(--ink); }
   .nav-item.active { background: var(--dark); color: #fff; }
-  .main { flex: 1; height: 100%; padding: 20px 24px; overflow-y: auto; }
+  .nav-icon { width: 15px; height: 15px; flex-shrink: 0; }
+  .main { flex: 1; height: 100%; padding: 22px 26px; overflow-y: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
-  th { padding: 9px 12px; font-weight: 700; color: var(--sub); border-bottom: 1px solid var(--line); text-align: left; background: var(--panel); }
+  th { padding: 9px 12px; font-weight: 700; color: var(--sub); border-bottom: 1px solid var(--line); text-align: left; background: var(--panel); font-size: 11.5px; letter-spacing: 0.03em; text-transform: uppercase; }
   td { padding: 9px 12px; border-bottom: 1px solid #F3F4F6; }
-  tr.memo-row { cursor: pointer; }
-  tr.memo-row:hover { background: #FAFAFA; }
-  .stat-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  tr.memo-row { cursor: pointer; transition: background 0.1s ease; }
+  tr.memo-row:hover { background: #FAFAFB; }
+  .stat-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px; box-shadow: var(--shadow); }
   .stat-label { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
-  .stat-val { font-family: Georgia, serif; font-size: 20px; font-weight: 700; }
+  .stat-val { font-family: 'Fraunces', Georgia, serif; font-size: 21px; font-weight: 600; }
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-  .goal-box { border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 20px; background: #fff; }
-  .goal-bar-track { height: 10px; background: #F3F4F6; border-radius: 6px; overflow: hidden; }
-  .goal-bar-fill { height: 100%; background: var(--dark); }
+  .goal-box { border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 20px; background: #fff; box-shadow: var(--shadow); }
+  .goal-bar-track { height: 8px; background: #EEEFF2; border-radius: 6px; overflow: hidden; }
+  .goal-bar-fill { height: 100%; background: linear-gradient(90deg, var(--dark), var(--accent)); transition: width 0.4s ease; }
   .charts-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
-  .chart-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .chart-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 16px; box-shadow: var(--shadow); }
   .auth-screen { max-width: 420px; margin: 80px auto; }
-  .auth-card { border: 1px solid var(--line); border-radius: 12px; padding: 28px; background: #fff; }
+  .auth-card { border: 1px solid var(--line); border-radius: 14px; padding: 30px; background: #fff; box-shadow: 0 4px 24px rgba(17,24,39,0.06); }
   .error-banner {
     display: flex; align-items: center; gap: 8px; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA;
     border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px;
@@ -109,12 +123,24 @@
 <!-- APP SHELL -->
 <div id="appWrap" class="app-shell hidden">
   <div class="sidebar">
-    <div style="font-size:11px;font-weight:800;letter-spacing:0.06em;color:#9CA3AF;margin-bottom:2px;">IC MEMO SYSTEM</div>
-    <div style="font-size:16px;font-weight:700;margin-bottom:20px;font-family:Georgia,serif;">Investment Ledger</div>
-    <button class="nav-item active" data-view="new">New Memo</button>
-    <button class="nav-item" data-view="log">Memo Log</button>
-    <button class="nav-item" data-view="dashboard">Dashboard</button>
-    <button class="nav-item hidden" data-view="team" id="teamNavItem">Team</button>
+    <div style="font-size:10.5px;font-weight:700;letter-spacing:0.08em;color:#9CA3AF;margin-bottom:3px;">IC MEMO SYSTEM</div>
+    <div style="font-size:17px;font-weight:600;margin-bottom:22px;font-family:'Fraunces',Georgia,serif;letter-spacing:-0.01em;">Investment Ledger</div>
+    <button class="nav-item active" data-view="new">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      New Memo
+    </button>
+    <button class="nav-item" data-view="log">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      Memo Log
+    </button>
+    <button class="nav-item" data-view="dashboard">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>
+      Dashboard
+    </button>
+    <button class="nav-item hidden" data-view="team" id="teamNavItem">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Team
+    </button>
     <div style="flex:1;"></div>
     <div class="top-user-row">
       <span id="currentUserLabel">—</span>
@@ -295,6 +321,44 @@
     if (!fv || !cp || fv <= 0) return null;
     return (1 - cp / fv) * 100;
   }
+
+  function countdownInfo(endDateTime) {
+    if (!endDateTime) return null;
+    const end = new Date(endDateTime).getTime();
+    if (isNaN(end)) return null;
+    const diffMs = end - Date.now();
+    if (diffMs <= 0) return { text: "Ended", urgency: "ended" };
+    const mins = Math.floor(diffMs / 60000);
+    const hours = Math.floor(mins / 60);
+    const days = Math.floor(hours / 24);
+    let text;
+    if (days >= 1) text = days + "d " + (hours % 24) + "h left";
+    else if (hours >= 1) text = hours + "h " + (mins % 60) + "m left";
+    else text = mins + "m left";
+    let urgency = "normal";
+    if (hours < 2) urgency = "urgent";
+    else if (hours < 24) urgency = "soon";
+    return { text, urgency };
+  }
+
+  const COUNTDOWN_COLORS = { ended: "#9CA3AF", urgent: "#B91C1C", soon: "#B45309", normal: "#374151" };
+
+  function countdownHTML(endDateTime) {
+    const info = countdownInfo(endDateTime);
+    if (!info) return '<span style="color:#9CA3AF;">—</span>';
+    return `<span class="countdown-live" data-end="${endDateTime}" style="color:${COUNTDOWN_COLORS[info.urgency]};font-weight:${info.urgency === "urgent" ? 700 : 500};">${info.text}</span>`;
+  }
+
+  function refreshLiveCountdowns() {
+    document.querySelectorAll(".countdown-live").forEach((elm) => {
+      const info = countdownInfo(elm.dataset.end);
+      if (!info) return;
+      elm.textContent = info.text;
+      elm.style.color = COUNTDOWN_COLORS[info.urgency];
+      elm.style.fontWeight = info.urgency === "urgent" ? "700" : "500";
+    });
+  }
+  setInterval(refreshLiveCountdowns, 30000);
 
   function badge(text, colorMap) {
     if (!text) return '<span style="color:#9CA3AF;font-size:13px;">—</span>';
@@ -606,7 +670,7 @@
             <tr class="memo-row" data-id="${m.id}">
               <td>${m.date || "—"}</td>
               <td style="font-weight:600;">${nameCell}</td>
-              <td style="color:var(--sub);font-size:12px;">${m.endDateTime ? new Date(m.endDateTime).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}</td>
+              <td style="font-size:12px;">${countdownHTML(m.endDateTime)}</td>
               <td>${m.researcher || "—"}</td>
               <td>${badge(m.recommendation, REC_COLORS)}</td>
               <td>${badge(m.pmDecision, DEC_COLORS)}</td>
@@ -647,7 +711,7 @@
 
       <div class="section-card"><div class="section-head">LISTING</div><div class="section-body grid2" style="font-size:13px;">
         <div><label class="field-label">Platform</label>${m.platform || "—"}</div>
-        <div><label class="field-label">Auction Ends</label>${m.endDateTime ? new Date(m.endDateTime).toLocaleString() : "—"}</div>
+        <div><label class="field-label">Auction Ends</label>${m.endDateTime ? new Date(m.endDateTime).toLocaleString() : "—"}${m.endDateTime ? ` \u00b7 ${countdownHTML(m.endDateTime)}` : ""}</div>
         <div style="grid-column: 1 / -1;"><label class="field-label">Listing</label>${m.listingUrl ? `<a href="${m.listingUrl}" target="_blank" rel="noopener noreferrer" style="color:#1F2937;text-decoration:underline;">Open listing \u2197</a>` : "—"}</div>
       </div></div>
 
