@@ -30,13 +30,13 @@
   .field { margin-bottom: 10px; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .section-card { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; overflow: hidden; background: #fff; box-shadow: var(--shadow); }
-  .section-head { background: var(--dark); color: #fff; padding: 7px 13px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; }
+  .section-head { background: #FAFAFC; color: #374151; padding: 8px 13px 8px 11px; font-size: 11px; font-weight: 700; letter-spacing: 0.07em; border-left: 3px solid var(--accent); border-bottom: 1px solid var(--line); }
   .section-body { padding: 14px; }
   .btn-primary {
-    width: 100%; padding: 10px 0; border-radius: 8px; border: none; background: var(--dark);
+    width: 100%; padding: 10px 0; border-radius: 8px; border: none; background: var(--accent);
     color: #fff; font-weight: 600; cursor: pointer; font-size: 13px; transition: background 0.15s ease, transform 0.1s ease;
   }
-  .btn-primary:hover:not(:disabled) { background: #111827; }
+  .btn-primary:hover:not(:disabled) { background: #2D2789; }
   .btn-primary:active:not(:disabled) { transform: scale(0.99); }
   .btn-primary:disabled { background: #9CA3AF; cursor: default; }
   .btn-secondary {
@@ -55,7 +55,7 @@
     font-size: 13px; font-weight: 600; margin-bottom: 2px; transition: background 0.15s ease, color 0.15s ease;
   }
   .nav-item:hover:not(.active) { background: #F3F4F6; color: var(--ink); }
-  .nav-item.active { background: var(--dark); color: #fff; }
+  .nav-item.active { background: var(--accent); color: #fff; }
   .nav-icon { width: 15px; height: 15px; flex-shrink: 0; }
   .main { flex: 1; height: 100%; padding: 22px 26px; overflow-y: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
@@ -88,6 +88,10 @@
   .slideover-panel { width: 480px; max-width: 92vw; background: #fff; height: 100%; overflow: auto; padding: 24px; }
   .link-btn { border: none; background: none; color: var(--sub); cursor: pointer; font-size: 13px; }
   .top-user-row { border-top: 1px solid var(--line); padding-top: 12px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--sub); }
+  .avatar-circle {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
   .info-icon { display: inline-block; margin-left: 4px; color: #9CA3AF; cursor: help; font-size: 12px; }
   .info-icon:hover { color: #4B5563; }
 </style>
@@ -143,8 +147,9 @@
     </button>
     <div style="flex:1;"></div>
     <div class="top-user-row">
-      <span id="currentUserLabel">—</span>
-      <span id="currentRoleBadge" style="margin-left:6px;"></span>
+      <span class="avatar-circle" id="userAvatar">—</span>
+      <span id="currentUserLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">—</span>
+      <span id="currentRoleBadge" style="margin-left:2px;"></span>
       <button class="link-btn" id="signOutBtn" style="margin-left:auto;">sign out</button>
     </div>
   </div>
@@ -318,7 +323,7 @@
       tierUsed: "1", fairValue: "", currentPrice: "", liquidityScore: "", convictionScore: "", expectedNetProfit: "",
       whyMispriced: ["", "", ""], risks: ["", "", ""], exitStrategy: "",
       pmDecision: "", pmReason: "", pmDate: "", notes: "",
-      outcome: { didBuy: "", reviewDate: "", whatHappened: "" }
+      outcome: { didBuy: "", reviewDate: "", whatHappened: "", soldGross: "", soldNet: "" }
     };
   }
 
@@ -418,6 +423,8 @@
         el("authScreen").classList.add("hidden");
         el("appWrap").classList.remove("hidden");
         el("currentUserLabel").textContent = user.displayName || user.email;
+        const nameForInitials = user.displayName || user.email || "?";
+        el("userAvatar").textContent = nameForInitials.trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
         el("currentRoleBadge").innerHTML = currentProfile ? `<span class="badge" style="background:#F3F4F6;color:#374151;border-color:#E5E7EB;">${currentProfile.role}</span>` : "";
         el("teamNavItem").classList.toggle("hidden", !(currentProfile && currentProfile.role === "admin"));
         el("unassignedBanner").classList.toggle("hidden", !(currentProfile && currentProfile.role === "researcher" && !currentProfile.reviewerUid));
@@ -708,7 +715,7 @@
   // ---------- DETAIL SLIDEOVER ----------
   function openDetail(id) {
     detailMemo = JSON.parse(JSON.stringify(memos.find((m) => m.id === id)));
-    if (!detailMemo.outcome) detailMemo.outcome = { didBuy: "", reviewDate: "", whatHappened: "" };
+    if (!detailMemo.outcome) detailMemo.outcome = { didBuy: "", reviewDate: "", whatHappened: "", soldGross: "", soldNet: "" };
     renderDetail();
     el("detailBackdrop").classList.remove("hidden");
   }
@@ -753,11 +760,35 @@
       <div class="section-card"><div class="section-head">OUTCOME REVIEW — 90 DAYS LATER</div><div class="section-body">
         ${fieldHTML("Did we buy?", `<select id="d_didbuy"><option value="">—</option><option ${m.outcome.didBuy === "Yes" ? "selected" : ""}>Yes</option><option ${m.outcome.didBuy === "No" ? "selected" : ""}>No</option></select>`)}
         ${fieldHTML("Review Date", `<input type="date" id="d_reviewdate" value="${m.outcome.reviewDate || ""}" />`)}
+        <div class="grid2">
+          ${fieldHTML("Sold For \u2014 Gross ($)" + infoIcon("What the card actually sold for, before deducting marketplace fees or shipping."), `<input type="number" step="0.01" id="d_soldgross" value="${m.outcome.soldGross || ""}" />`)}
+          ${fieldHTML("Sold For \u2014 Net ($)" + infoIcon("What you actually kept after marketplace fees and shipping were deducted \u2014 the real take-home."), `<input type="number" step="0.01" id="d_soldnet" value="${m.outcome.soldNet || ""}" />`)}
+        </div>
+        <div id="d_actualProfit" style="font-size:12px;color:var(--sub);margin:-2px 0 10px;"></div>
         ${fieldHTML("What happened?", `<textarea id="d_whathappened">${m.outcome.whatHappened || ""}</textarea>`)}
       </div></div>
 
       <button class="btn-primary" id="saveDetailBtn">Save Changes</button>
     `;
+
+    function updateActualProfit() {
+      const net = parseFloat(el("d_soldnet").value);
+      const cost = parseFloat(m.currentPrice);
+      const box = el("d_actualProfit");
+      if (isNaN(net) || isNaN(cost)) { box.textContent = ""; return; }
+      const actual = net - cost;
+      const expected = parseFloat(m.expectedNetProfit);
+      let text = `Actual net profit: $${actual.toFixed(2)}`;
+      if (!isNaN(expected)) {
+        const diff = actual - expected;
+        text += ` (expected $${expected.toFixed(2)}, ${diff >= 0 ? "beat it by $" + diff.toFixed(2) : "missed by $" + Math.abs(diff).toFixed(2)})`;
+      }
+      box.textContent = text;
+      box.style.color = actual >= 0 ? "#15803D" : "#B91C1C";
+    }
+    el("d_soldnet").addEventListener("input", updateActualProfit);
+    updateActualProfit();
+
     el("saveDetailBtn").addEventListener("click", async () => {
       const btn = el("saveDetailBtn");
       btn.disabled = true; btn.textContent = "Saving…";
@@ -765,7 +796,8 @@
       detailMemo.pmReason = el("d_reason").value;
       detailMemo.pmDate = el("d_date").value;
       detailMemo.outcome = {
-        didBuy: el("d_didbuy").value, reviewDate: el("d_reviewdate").value, whatHappened: el("d_whathappened").value
+        didBuy: el("d_didbuy").value, reviewDate: el("d_reviewdate").value, whatHappened: el("d_whathappened").value,
+        soldGross: el("d_soldgross").value, soldNet: el("d_soldnet").value
       };
       const ok = await saveMemo(detailMemo);
       btn.disabled = false; btn.textContent = "Save Changes";
